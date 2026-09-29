@@ -1,0 +1,12 @@
+{
+  "title": "Graph Traversals Contest",
+  "duration_minutes": 120,
+  "time_limit_seconds": 1,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {"folder": "A-notes-chain", "points": 250},
+    {"folder": "B-power-cut", "points": 250},
+    {"folder": "C-hackathon-leaderboard", "points": 250},
+    {"folder": "D-networking-night", "points": 250}
+  ]
+}

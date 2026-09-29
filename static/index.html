@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contest Judge</title>
+<script>try { const t = localStorage.getItem("judge-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+:root{
+  --ink:#1c2230; --muted:#5b6475; --paper:#ffffff; --panel:#f3f5f9; --sunk:#e9edf3; --line:#d7dce6;
+  --accent:#2f5d8a; --accent-ink:#ffffff; --code:#fbfcfd; --shadow:rgba(28,34,48,.18);
+  --ac:#1a7f4b; --wa:#c23b3b; --tle:#a86b00; --re:#7b4fd6; --ce:#5b6475;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,Menlo,monospace;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#e4e8ef; --muted:#9aa4b5; --paper:#151a22; --panel:#1e2530; --sunk:#252d3a; --line:#313a48;
+  --accent:#8db4dc; --accent-ink:#10161f; --code:#12171e; --shadow:rgba(0,0,0,.5);
+  --ac:#4cc38a; --wa:#ff7b7b; --tle:#e6b450; --re:#b69cff; --ce:#9aa4b5; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ink:#e4e8ef; --muted:#9aa4b5; --paper:#151a22; --panel:#1e2530; --sunk:#252d3a; --line:#313a48;
+  --accent:#8db4dc; --accent-ink:#10161f; --code:#12171e; --shadow:rgba(0,0,0,.5);
+  --ac:#4cc38a; --wa:#ff7b7b; --tle:#e6b450; --re:#b69cff; --ce:#9aa4b5; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--sans);display:flex;flex-direction:column}
+body.dragging{user-select:none}
+body.dragging.cols{cursor:col-resize} body.dragging.rows{cursor:row-resize}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:2px solid var(--ink);flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0;flex:1}
+.brand b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand span{color:var(--muted);font-size:13px}
+.clock{font:600 20px/1 var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.clock small{display:block;font:500 11px/1.2 var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:right}
+.clock.low{color:var(--wa)}
+.who{font-size:13px;color:var(--muted);text-align:right}
+.who b{color:var(--ink);font-weight:600}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--paper);padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.warn{color:var(--wa)}
+.btn:disabled{opacity:.55;cursor:progress}
+.link{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+
+/* join + lobby */
+.center{padding:48px 16px;display:grid;justify-items:center}
+.card{width:100%;max-width:560px;border:1px solid var(--line);border-radius:10px;padding:28px;background:var(--paper)}
+.card h1{margin:0 0 4px;font-size:26px;line-height:1.2;text-wrap:balance}
+.card .sub{color:var(--muted);margin:0 0 20px}
+.field{display:grid;gap:4px;margin-bottom:14px}
+.field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field input{padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--code)}
+.err{color:var(--wa);min-height:1.5em;margin:4px 0 0;font-size:14px}
+.rules{margin:0 0 20px;padding-left:20px;display:grid;gap:4px}
+.people{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 20px}
+.chip-name{padding:3px 10px;border-radius:99px;background:var(--panel);border:1px solid var(--line);font-size:13px}
+.share{background:var(--panel);border-radius:8px;padding:14px 16px;margin-bottom:20px;font-size:14px}
+.share code{font:600 15px var(--mono)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+
+/* arena */
+.center{flex:1;overflow:auto;align-content:start}
+#v-arena{flex:1;min-height:0;display:flex;flex-direction:column}
+.arena{flex:1;min-height:0;display:grid;grid-template-columns:210px minmax(260px,calc((100% - 216px) * var(--split,.47))) 6px minmax(320px,1fr)}
+.gutter{touch-action:none;outline-offset:-2px}
+.gutter-v{cursor:col-resize;background:linear-gradient(var(--line),var(--line)) center/1px 100% no-repeat}
+.gutter-h{cursor:row-resize;height:6px;flex:none;background:linear-gradient(var(--line),var(--line)) center/100% 1px no-repeat}
+.gutter-v:hover,.gutter-v.drag,.gutter-v:focus-visible{background:linear-gradient(var(--accent),var(--accent)) center/3px 100% no-repeat}
+.gutter-h:hover,.gutter-h.drag,.gutter-h:focus-visible{background:linear-gradient(var(--accent),var(--accent)) center/100% 3px no-repeat}
+.icon-btn{border:1px solid var(--line);background:var(--paper);width:34px;height:34px;border-radius:6px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.icon-btn:hover{border-color:var(--muted)}
+.icon-btn svg{width:17px;height:17px}
+
+/* notices and pop-ups */
+.toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;z-index:40;width:min(360px,calc(100vw - 32px))}
+.toast{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:10px 14px;box-shadow:0 8px 28px var(--shadow);font-size:14px;cursor:pointer;animation:rise .22s ease-out}
+.toast.good{border-left-color:var(--ac)} .toast.warn{border-left-color:var(--tle)} .toast.bad{border-left-color:var(--wa)}
+.overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 38%,transparent);display:grid;place-items:center;padding:16px;z-index:50;animation:fade .18s ease-out}
+.modal{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px var(--shadow);width:min(440px,100%);padding:28px;text-align:center;animation:pop .28s cubic-bezier(.2,.9,.3,1.2)}
+.modal h2{margin:10px 0 6px;font-size:23px;line-height:1.25;text-wrap:balance}
+.modal .lead{margin:0 0 6px;font-weight:500}
+.modal .muted{margin:0 0 20px}
+.modal .row{justify-content:center}
+.badge{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto;background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--ac)}
+.badge.clock{background:color-mix(in srgb,var(--tle) 18%,transparent);color:var(--tle)}
+.badge svg{width:34px;height:34px}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:scale(.92)}}
+.confirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--tle) 12%,var(--paper));font-size:14px}
+.confirm span{margin-right:auto}
+mark{background:color-mix(in srgb,var(--tle) 32%,transparent);color:inherit;border-radius:2px}
+.diffnote{font-size:14px;margin:0 0 10px;padding:8px 10px;border-radius:6px;background:var(--panel)}
+.diffnote code{font:600 13px var(--mono)}
+.dot.run{background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--accent);animation:blink 1s ease-in-out infinite}
+@keyframes blink{50%{opacity:.45}}
+.plist{border-right:1px solid var(--line);overflow:auto;padding:10px 0;display:flex;flex-direction:column}
+.pitem{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;text-align:left;width:100%;border:0;background:none;padding:10px 14px;cursor:pointer;border-left:3px solid transparent}
+.pitem:hover{background:var(--panel)}
+.pitem.on{background:var(--panel);border-left-color:var(--accent)}
+.pitem .l{font:700 16px var(--mono)}
+.pitem .t{font-size:14px;line-height:1.3}
+.pitem .t small{display:block;color:var(--muted);font-size:12px}
+.mark{font:600 12px var(--mono);padding:1px 6px;border-radius:4px}
+.mark.ok{color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent)}
+.mark.bad{color:var(--wa);background:color-mix(in srgb,var(--wa) 12%,transparent)}
+.plist .foot{margin-top:auto;padding:14px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.plist .foot b{display:block;color:var(--ink);font-size:22px;font-family:var(--mono)}
+
+.pane{display:flex;flex-direction:column;min-height:0;min-width:0}
+.tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab{border:0;background:none;padding:10px 12px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--ink);border-bottom-color:var(--ink)}
+.scroll{overflow:auto;min-height:0;flex:1}
+
+/* statement, styled like the original problem pages */
+.statement{padding:20px 24px 48px;font:16px/1.65 var(--serif);max-width:52rem}
+.statement .ph{font-family:var(--sans);margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid var(--ink)}
+.statement .ph h1{margin:0 0 4px;font:700 26px/1.2 var(--serif);text-wrap:balance}
+.statement .ph p{margin:0;color:var(--muted);font-size:13px}
+.statement h2{font:700 15px/1.3 var(--sans);margin:26px 0 6px}
+.statement p,.statement li{max-width:70ch}
+.statement code{font:.86em var(--mono);background:var(--panel);padding:.05em .3em;border-radius:3px}
+.statement .sample{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0 6px}
+.statement .sample>div{min-width:0}
+.statement .sample h3{font:600 12px/1 var(--sans);color:var(--muted);margin:0 0 6px}
+.statement pre{margin:0;background:var(--panel);border-left:3px solid var(--accent);padding:8px 12px;overflow-x:auto;font:13px/1.45 var(--mono)}
+.statement pre code{background:none;padding:0}
+.statement .explain{margin:6px 0 22px}
+.statement .explain strong{font-family:var(--sans);font-size:.9em}
+.try{margin:6px 0 0;font:500 12px var(--sans)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+td.c,th.c{text-align:center}
+tr.mine td{background:var(--panel)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--sunk)}
+.cell-ok{color:var(--ac);font-weight:600}
+.cell-bad{color:var(--wa);font-weight:600}
+.cell small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.tablewrap{overflow-x:auto;padding:12px 16px}
+.empty{padding:28px 20px;color:var(--muted)}
+
+/* editor */
+.edpane{display:flex;flex-direction:column;min-height:0}
+.edbar{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.edbar .file{font:500 13px var(--mono);color:var(--muted);margin-right:auto}
+.editor{flex:1;min-height:260px;position:relative;background:var(--code)}
+.editor .CodeMirror,.editor textarea{position:absolute;inset:0;height:100%;width:100%}
+.editor textarea{border:0;padding:10px;resize:none;background:var(--code);font:14px/1.5 var(--mono);tab-size:4}
+.CodeMirror{font:14px/1.5 var(--mono);background:var(--code);color:var(--ink)}
+.CodeMirror-gutters{background:var(--panel);border-right:1px solid var(--line)}
+.CodeMirror-linenumber{color:var(--muted)}
+.CodeMirror-cursor{border-left:2px solid var(--ink)}
+.CodeMirror-selected,.CodeMirror-focused .CodeMirror-selected{background:color-mix(in srgb,var(--accent) 22%,transparent)!important}
+.CodeMirror-matchingbracket{color:var(--ac)!important;text-decoration:underline}
+.cm-s-default .cm-keyword{color:var(--accent);font-weight:600}
+.cm-s-default .cm-type,.cm-s-default .cm-variable-3{color:var(--re)}
+.cm-s-default .cm-string{color:var(--ac)}
+.cm-s-default .cm-number{color:var(--tle)}
+.cm-s-default .cm-comment{color:var(--muted);font-style:italic}
+.cm-s-default .cm-def{color:var(--ink);font-weight:600}
+.cm-s-default .cm-variable,.cm-s-default .cm-operator,.cm-s-default .cm-meta{color:var(--ink)}
+
+.console{height:38%;min-height:120px;display:flex;flex-direction:column;flex:none}
+.edpane{min-width:0}
+.io{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px;flex:1;min-height:0}
+.io>div{display:flex;flex-direction:column;min-height:0;min-width:0}
+.io label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.io textarea,.io pre{flex:1;margin:0;border:1px solid var(--line);border-radius:6px;background:var(--code);padding:8px 10px;font:13px/1.45 var(--mono);resize:none;overflow:auto;white-space:pre}
+.result{padding:12px 14px;overflow:auto;flex:1}
+.verdict{font-size:17px;margin:0 0 8px}
+.verdict b{font-weight:700}
+.v-AC{color:var(--ac)} .v-WA,.v-OLE{color:var(--wa)} .v-TLE{color:var(--tle)} .v-RE{color:var(--re)} .v-CE{color:var(--ce)}
+.dots{display:flex;flex-wrap:wrap;gap:3px;margin:0 0 12px}
+.dot{width:22px;height:18px;border-radius:3px;font:500 10px/18px var(--mono);text-align:center;background:var(--sunk);color:var(--muted)}
+.dot.AC{background:color-mix(in srgb,var(--ac) 22%,transparent);color:var(--ac)}
+.dot.bad{background:var(--wa);color:var(--paper)}
+.dot.TLE{background:var(--tle)} .dot.RE{background:var(--re)}
+.detail{display:grid;gap:10px}
+.detail h4{margin:0 0 3px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.detail pre{margin:0;border:1px solid var(--line);border-radius:6px;background:var(--code);padding:8px 10px;font:12.5px/1.45 var(--mono);max-height:220px;overflow:auto;white-space:pre}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.banner{padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line);font-size:14px}
+
+/* host dashboard */
+#v-host{flex:1;overflow:auto}
+.host{padding-block:20px 48px;padding-inline:24px;display:grid;gap:18px;max-width:1440px;margin:0 auto}
+.hhead{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.eyebrow{margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.hhead h1{margin:2px 0;font-size:26px;line-height:1.2;text-wrap:balance}
+.hhead p{margin:0}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--paper);min-width:0}
+.tile .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.tile .v{font:600 26px/1.25 var(--mono);font-variant-numeric:tabular-nums;margin-top:4px}
+.tile .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.host-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(280px,1fr);gap:18px;align-items:start}
+.panel{border:1px solid var(--line);border-radius:10px;background:var(--paper);min-width:0}
+.panel>h2{margin:0;padding:12px 16px;font-size:15px;border-bottom:1px solid var(--line);display:flex;gap:12px;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
+.panel>h2 small{font-weight:400;color:var(--muted);font-size:12px}
+.panel .tablewrap{padding:4px 8px 8px}
+.pdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ce);margin-right:8px;vertical-align:1px;flex:none}
+.pdot.on{background:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 22%,transparent)}
+.pdot.idle{background:var(--tle)}
+td.pname{min-width:190px;white-space:normal}
+td.pname small{display:block;color:var(--muted);font-size:12px;margin:2px 0 0 17px}
+.tag{font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.06em;color:var(--accent);border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:1px}
+td.hc{text-align:center;min-width:54px}
+td.hc.viewing{box-shadow:inset 0 0 0 2px var(--accent);border-radius:6px}
+td.hc.judging{color:var(--accent);font-weight:600;animation:blink 1s ease-in-out infinite}
+.feed{list-style:none;margin:0;padding:6px 0;max-height:560px;overflow:auto}
+.ev{display:grid;grid-template-columns:48px 10px minmax(0,1fr);gap:8px;align-items:baseline;padding:7px 16px;font-size:14px}
+.ev[data-sub]{cursor:pointer}
+.ev[data-sub]:hover{background:var(--panel)}
+.ev-t{font:12px var(--mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.ev-dot{width:8px;height:8px;border-radius:50%;background:var(--line);align-self:center}
+.ev.good .ev-dot{background:var(--ac)} .ev.bad .ev-dot{background:var(--wa)} .ev.info .ev-dot{background:var(--accent)}
+.ev.tle .ev-dot{background:var(--tle)} .ev.re .ev-dot{background:var(--re)} .ev.ce .ev-dot{background:var(--ce)}
+.vbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--sunk);min-width:120px}
+.vbar span{display:block;height:100%}
+.notice{padding:10px 14px;border-radius:8px;background:color-mix(in srgb,var(--accent) 12%,var(--paper));border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-left:8px;vertical-align:middle}
+.seg button{border:0;background:none;padding:4px 10px;cursor:pointer;font-size:13px;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.compete{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.compete input{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--code);width:180px}
+.modal.wide{width:min(920px,100%);text-align:left;max-height:calc(100vh - 32px);overflow:auto}
+.modal.wide h2{font-size:19px;margin-top:0}
+pre.code{margin:0;border:1px solid var(--line);border-radius:6px;background:var(--code);padding:8px 0;font:12.5px/1.5 var(--mono);max-height:420px;overflow:auto}
+pre.code .ln{display:inline-block;width:3.2em;padding-right:1em;text-align:right;color:var(--muted);user-select:none}
+
+@media (max-width:1100px){
+  .host-grid{grid-template-columns:1fr}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .host{padding-inline:16px}
+}
+@media (max-width:1100px){
+  html,body{height:auto}
+  .arena{grid-template-columns:1fr;height:auto}
+  .gutter-v{display:none}
+  .console{height:320px}
+  .plist{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:0}
+  .pitem{width:auto;min-width:170px;border-left:0;border-bottom:3px solid transparent}
+  .pitem.on{border-bottom-color:var(--accent)}
+  .plist .foot{margin:0 0 0 auto;border-top:0;border-left:1px solid var(--line);min-width:120px}
+  .pane{border-right:0;border-bottom:1px solid var(--line)}
+  .scroll{max-height:none}
+  .editor{height:440px;flex:none}
+}
+@media (max-width:600px){
+  .io,.statement .sample{grid-template-columns:1fr}
+  .statement{padding:16px}
+  .card{padding:20px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><b id="title">Contest</b><span id="subtitle"></span></div>
+  <div class="clock num" id="clock"></div>
+  <div class="who" id="who"></div>
+  <button class="icon-btn" id="btn-theme" type="button" aria-label="Switch theme" title="Switch between light and dark"></button>
+</header>
+
+<section id="v-join" class="center" hidden>
+  <form class="card" id="join-form">
+    <h1 id="join-title">Join the contest</h1>
+    <p class="sub" id="join-sub">Enter the name that should appear in the standings.</p>
+    <div class="field"><label for="join-name">Your name</label><input id="join-name" maxlength="24" autocomplete="nickname" required></div>
+    <div class="field" id="code-field" hidden><label for="join-code">Join code</label><input id="join-code" inputmode="numeric" maxlength="6" placeholder="6 digits from the host's screen"></div>
+    <button class="btn primary" type="submit">Join</button>
+    <p class="err" id="join-err"></p>
+  </form>
+</section>
+
+<section id="v-lobby" class="center" hidden>
+  <div class="card">
+    <h1 id="lobby-title"></h1>
+    <p class="sub" id="lobby-sub"></p>
+    <ul class="rules" id="rules"></ul>
+    <div class="share" id="share" hidden></div>
+    <div class="field"><label>In the lobby</label></div>
+    <div class="people" id="people"></div>
+    <div class="row" id="lobby-actions"></div>
+  </div>
+</section>
+
+<section id="v-arena" hidden>
+  <div class="banner" id="ended-banner" hidden>The contest is over. You can keep solving for practice; new submissions don't change the standings. Hidden test inputs are now shown when a submission fails.</div>
+  <div class="arena">
+    <nav class="plist" id="plist" aria-label="Problems"></nav>
+    <div class="pane">
+      <div class="tabs" role="tablist">
+        <button class="tab on" data-tab="problem">Problem</button>
+        <button class="tab" data-tab="standings">Standings</button>
+        <button class="tab" data-tab="subs">My submissions</button>
+      </div>
+      <div class="scroll" id="t-problem"></div>
+      <div class="scroll" id="t-standings" hidden></div>
+      <div class="scroll" id="t-subs" hidden></div>
+    </div>
+    <div class="gutter gutter-v" id="g-cols" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="Drag to resize the problem and editor panels" title="Drag to resize. Double-click to reset."></div>
+    <div class="edpane" id="edpane">
+      <div class="edbar">
+        <span class="file">Main.java &middot; Java</span>
+        <button class="btn" id="btn-template" title="Replace your code with the starter code">Reset code</button>
+        <button class="btn" id="btn-run" title="Ctrl+Enter">Run</button>
+        <button class="btn primary" id="btn-submit">Submit</button>
+      </div>
+      <div class="confirm" id="confirm" hidden role="alert">
+        <span id="confirm-msg"></span>
+        <button class="btn primary" id="confirm-yes" type="button">Submit anyway</button>
+        <button class="btn" id="confirm-no" type="button">Cancel</button>
+      </div>
+      <div class="editor" id="editor"></div>
+      <div class="gutter gutter-h" id="g-rows" role="separator" aria-orientation="horizontal" tabindex="0"
+           aria-label="Drag to resize the editor and output panels" title="Drag to resize. Double-click to reset."></div>
+      <div class="console" id="console">
+        <div class="tabs">
+          <button class="tab on" data-ctab="run">Run</button>
+          <button class="tab" data-ctab="result">Verdict</button>
+        </div>
+        <div class="io" id="c-run">
+          <div><label for="stdin">Input</label><textarea id="stdin" spellcheck="false"></textarea></div>
+          <div><label>Output</label><pre id="stdout" class="muted">Press Run to try your code on this input.</pre></div>
+        </div>
+        <div class="result" id="c-result" hidden><p class="muted">Submit your code to see the verdict here.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="v-host" hidden>
+  <div class="host">
+    <div class="hhead">
+      <div><p class="eyebrow">Host dashboard</p><h1 id="h-title"></h1><p class="muted" id="h-sub"></p></div>
+      <div class="row" id="h-actions"></div>
+    </div>
+    <div class="share" id="h-share" hidden></div>
+    <div class="notice" id="h-private" hidden>You're competing too, so participants' code and what they're doing right now stay hidden until the contest ends. Standings and verdicts are shown as usual.</div>
+    <div class="tiles" id="h-tiles"></div>
+    <div class="host-grid">
+      <section class="panel"><h2>Participants <small id="h-people-note"></small></h2><div class="tablewrap" id="h-people"></div></section>
+      <section class="panel"><h2>Live activity <small>newest first</small></h2><ol class="feed" id="h-feed"></ol></section>
+    </div>
+    <section class="panel"><h2>Problems</h2><div class="tablewrap" id="h-problems"></div></section>
+    <section class="panel"><h2>All submissions <small id="h-subs-note">Click one to see its code</small></h2><div class="tablewrap" id="h-subs"></div></section>
+  </div>
+</section>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="overlay" id="overlay" hidden><div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div></div>
+<canvas id="confetti" hidden></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script>
+// Used when a problem folder has no Main.java starter of its own.
+const TEMPLATE = `import java.io.*;
+import java.util.*;
+
+public class Main {
+
+    public static void main(String[] args) throws Exception {
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StringTokenizer st = new StringTokenizer(br.readLine());
+
+        int n = Integer.parseInt(st.nextToken());
+
+        System.out.println(n);
+    }
+}
+`;
+const starterFor = pid => S.problems?.find(p => p.id === pid)?.starter || TEMPLATE;
+const VERDICT = {AC: "Accepted", WA: "Wrong answer", TLE: "Time limit exceeded", RE: "Runtime error",
+                 CE: "Compilation error", OLE: "Output limit exceeded"};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const local = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const S = { st: null, problems: null, cur: local.get("judge-problem") || "A", tab: "problem", token: local.get("judge-token") || "",
+            offset: 0, busy: false, results: {}, runs: {}, view: null, hostView: local.get("judge-hostview") || "dashboard" };
+
+async function api(path, body) {
+  const opt = { headers: { "X-Token": S.token } };
+  if (body !== undefined) {
+    opt.method = "POST";
+    opt.headers["Content-Type"] = "application/json";
+    opt.body = JSON.stringify(body);
+  }
+  let r;
+  try { r = await fetch(path, opt); } catch { throw new Error("Can't reach the judge. Check that judge.py is still running."); }
+  const j = await r.json().catch(() => ({ error: "The judge sent a reply that could not be read." }));
+  if (!r.ok) throw new Error(j.error || `Request failed (${r.status}).`);
+  return j;
+}
+
+/* ---------- editor ---------- */
+let E;
+function makeEditor() {
+  const host = $("#editor");
+  if (window.CodeMirror) {
+    const cm = CodeMirror(host, {
+      mode: "text/x-java", lineNumbers: true, indentUnit: 4, tabSize: 4, matchBrackets: true, autoCloseBrackets: true,
+      extraKeys: {
+        Tab: c => c.somethingSelected() ? c.execCommand("indentMore") : c.execCommand("insertSoftTab"),
+        "Shift-Tab": c => c.execCommand("indentLess"),
+        "Ctrl-Enter": () => doRun(), "Cmd-Enter": () => doRun(),
+      },
+    });
+    E = { get: () => cm.getValue(), set: v => { cm.setValue(v); cm.clearHistory(); }, onChange: f => cm.on("change", f), refresh: () => cm.refresh() };
+  } else {
+    const ta = document.createElement("textarea");
+    ta.spellcheck = false;
+    host.appendChild(ta);
+    ta.addEventListener("keydown", e => {
+      if (e.key === "Tab") { e.preventDefault(); ta.setRangeText("    ", ta.selectionStart, ta.selectionEnd, "end"); }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doRun(); }
+    });
+    E = { get: () => ta.value, set: v => { ta.value = v; }, onChange: f => ta.addEventListener("input", f), refresh() {} };
+  }
+  let t;
+  E.onChange(() => { clearTimeout(t); t = setTimeout(() => local.set(draftKey(S.cur), E.get()), 300); });
+}
+const draftKey = pid => `judge-draft2:${S.st?.title}:${pid}`;
+function loadDraft() { E.set(local.get(draftKey(S.cur)) ?? starterFor(S.cur)); }
+function saveDraft() { if (E && S.cur) local.set(draftKey(S.cur), E.get()); }
+
+/* ---------- state ---------- */
+function show(view) {
+  if (S.view === view) return;
+  S.view = view;
+  for (const v of ["join", "lobby", "arena", "host"]) $("#v-" + v).hidden = v !== view;
+  if (view === "host") hostRefresh();
+  if (view === "arena") setTimeout(() => {
+    const h = +local.get("judge-console");
+    if (h) applyConsole(h);
+    E.refresh();
+  }, 0);
+}
+
+async function refresh() {
+  let st;
+  // Players report which problem they have open, for the host dashboard.
+  try { st = await api(S.view === "arena" && S.cur ? `/api/state?p=${S.cur}` : "/api/state"); }
+  catch (e) { $("#who").textContent = e.message; return; }
+  S.st = st;
+  S.offset = st.now * 1000 - Date.now();
+  if (!st.me && S.token) { S.token = ""; local.set("judge-token", ""); }
+  $("#title").textContent = st.title;
+  document.title = st.title;
+  if (st.is_host && !st.me) S.hostView = "dashboard";
+  const hostDash = st.is_host && S.hostView !== "play";
+  if (st.is_host) {
+    const sw = st.me ? `<span class="seg" role="group" aria-label="View">
+        <button type="button" data-hv="dashboard" class="${hostDash ? "on" : ""}">Dashboard</button>
+        <button type="button" data-hv="play" class="${hostDash ? "" : "on"}">My contest</button></span>` : "";
+    const reset = !hostDash && st.phase !== "lobby"
+      ? ` <button class="link" id="btn-reset">${S.resetArmed ? "Click again: delete all submissions and restart" : "Reset contest"}</button>` : "";
+    $("#who").innerHTML = `<b>Host</b>${st.me ? ` &middot; playing as ${esc(st.me.name)}` : ""}${sw}${reset}`;
+  } else {
+    $("#who").innerHTML = st.me ? `Signed in as <b>${esc(st.me.name)}</b>` : "";
+  }
+  if (hostDash) { show("host"); tick(); return; }
+  if (!st.me) return renderJoin();
+  if (st.phase === "lobby") { S.problems = null; S.prevBoard = null; S.lastLeft = null; return renderLobby(); }
+  if (!S.problems) {
+    S.problems = await api("/api/problems").catch(() => null);
+    if (!S.problems) return;
+    if (!S.problems.some(p => p.id === S.cur)) S.cur = S.problems[0].id;
+    loadDraft();
+    renderProblem();
+    setStdinFromSample(0);
+  }
+  show("arena");
+  $("#ended-banner").hidden = st.phase !== "ended";
+  renderList();
+  renderStandings();
+  renderSubs();
+  announceRivals(st.scoreboard);
+  tick();
+  if (st.phase === "ended" && !local.get(`judge-over:${st.start}`)) {
+    local.set(`judge-over:${st.start}`, "1");
+    showContestOver();
+  }
+}
+
+// Tell the player when someone else solves a problem.
+function announceRivals(board) {
+  const prev = S.prevBoard;
+  S.prevBoard = board;
+  if (!prev) return;
+  for (const r of board) {
+    if (r.name === S.st.me.name) continue;
+    const before = prev.find(x => x.name === r.name);
+    for (const p of S.problems) {
+      const c = r.cells[p.id];
+      if (c.solved && !before?.cells[p.id]?.solved)
+        toast(`<b>${esc(r.name)}</b> solved <b>${p.id}. ${esc(p.title)}</b> at ${c.minute} min.`, "info", 10000);
+    }
+  }
+}
+
+function tick() {
+  const st = S.st;
+  if (!st) return;
+  const c = $("#clock");
+  if (st.phase === "lobby") { c.innerHTML = `<small>Length</small>${fmt(st.duration)}`; c.classList.remove("low"); return; }
+  const left = st.start + st.duration - (Date.now() + S.offset) / 1000;
+  if (st.phase === "running" && left <= 0) { refresh(); }
+  if (st.phase === "ended" || left <= 0) { c.innerHTML = `<small>Contest</small>Ended`; c.classList.remove("low"); return; }
+  c.innerHTML = `<small>Time left</small>${fmt(left)}`;
+  c.classList.toggle("low", left < 600);
+  for (const mins of [15, 5])
+    if (S.lastLeft > mins * 60 && left <= mins * 60) toast(`<b>${mins} minutes left.</b> Submit what you have.`, "warn", 9000);
+  S.lastLeft = left;
+}
+const fmt = s => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60;
+                   return `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
+
+/* ---------- join + lobby ---------- */
+function renderJoin() {
+  show("join");
+  $("#join-title").textContent = `Join ${S.st.title}`;
+  $("#code-field").hidden = !S.st.needs_code;
+}
+$("#join-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  $("#join-err").textContent = "";
+  try {
+    const r = await api("/api/join", { name: $("#join-name").value, code: $("#join-code").value });
+    S.token = r.token;
+    local.set("judge-token", r.token);
+    refresh();
+  } catch (err) { $("#join-err").textContent = err.message; }
+});
+
+function renderLobby() {
+  show("lobby");
+  const st = S.st;
+  const tl = st.time_limit.map(t => `${t} s`).join(" or ");
+  $("#lobby-title").textContent = st.title;
+  $("#lobby-sub").textContent = `${st.problem_count} problems · ${st.duration / 60} minutes · ${st.total_points} points in total`;
+  $("#rules").innerHTML = [
+    `Solutions are in Java. Your class must be named <code class="mono">Main</code>. The judge uses ${esc(st.java)}.`,
+    `Read from standard input and print to standard output. Output is compared word by word.`,
+    `Each test has a time limit of ${tl}. Java's start-up time is not counted.`,
+    st.penalty
+      ? `Every problem is worth the points shown. Ties are broken by time: the minute of each accepted solution, plus ${st.penalty} minutes for each rejected try before it. Compilation errors cost nothing.`
+      : `Every problem is worth the points shown. Wrong submissions cost nothing. If points are tied, whoever solved faster ranks higher.`,
+    `A failed hidden test shows only its number until the contest ends.`,
+  ].map(x => `<li>${x}</li>`).join("");
+  $("#people").innerHTML = st.participants.map(n => `<span class="chip-name">${esc(n)}</span>`).join("") || `<span class="muted">Nobody yet</span>`;
+  renderInvite($("#share"), st.is_host ? st : {});
+  const acts = $("#lobby-actions");
+  if (st.is_host) {
+    if (!acts.querySelector("#btn-start")) {
+      acts.innerHTML = `<button class="btn primary" id="btn-start">Start the contest</button><span class="muted">The clock starts for everyone at once.</span>`;
+      $("#btn-start").onclick = async () => { await api("/api/start", {}).catch(e => toast(esc(e.message), "bad")); refresh(); };
+    }
+  } else {
+    acts.innerHTML = `<span class="muted">Waiting for the host to start the contest. This page updates on its own.</span>`;
+  }
+}
+
+/* ---------- arena ---------- */
+function myRow() { return S.st.scoreboard?.find(r => r.name === S.st.me.name); }
+
+function renderList() {
+  const row = myRow();
+  const upsolved = new Set(S.st.submissions.filter(s => s.verdict === "AC").map(s => s.problem));
+  $("#plist").innerHTML = S.problems.map(p => {
+    const c = row?.cells[p.id];
+    let m = "";
+    if (c?.solved) m = `<span class="mark ok">+${c.wrong || ""}</span>`;
+    else if (upsolved.has(p.id)) m = `<span class="mark ok" title="Solved after the contest">&check;</span>`;
+    else if (c?.wrong) m = `<span class="mark bad">&minus;${c.wrong}</span>`;
+    return `<button class="pitem ${p.id === S.cur ? "on" : ""}" data-p="${p.id}"><span class="l">${p.id}</span>
+      <span class="t">${esc(p.title)}<small>${p.points} points</small></span>${m}</button>`;
+  }).join("") + `<div class="foot">Your score<b class="num">${row?.points ?? 0}</b>Rank ${row?.rank ?? "-"} of ${S.st.scoreboard.length}</div>`;
+  for (const b of document.querySelectorAll(".pitem")) b.onclick = () => selectProblem(b.dataset.p);
+}
+
+function selectProblem(pid) {
+  if (pid === S.cur) return setTab("problem");
+  saveDraft();
+  S.cur = pid;
+  local.set("judge-problem", pid);
+  loadDraft();
+  renderProblem();
+  renderList();
+  setStdinFromSample(0);
+  $("#stdout").textContent = "Press Run to try your code on this input.";
+  $("#stdout").className = "muted";
+  renderResult(S.results[pid]);
+  setTab("problem");
+}
+
+function renderProblem() {
+  const p = S.problems.find(x => x.id === S.cur);
+  const el = $("#t-problem");
+  el.innerHTML = `<article class="statement"><div class="ph"><h1>${p.id}. ${esc(p.title)}</h1>
+    <p>${p.points} points &middot; Time limit ${p.time_limit} s per test &middot; ${p.test_count} tests</p></div>${p.statement}</article>`;
+  el.querySelectorAll(".sample").forEach((box, i) => {
+    if (!p.samples[i]) return;
+    const b = document.createElement("button");
+    b.className = "link try";
+    b.textContent = `Use sample ${i + 1} as input`;
+    b.onclick = () => { setStdinFromSample(i); setConsole("run"); };
+    box.insertAdjacentElement("afterend", b);
+  });
+  el.scrollTop = 0;
+}
+
+function setStdinFromSample(i) {
+  const p = S.problems.find(x => x.id === S.cur);
+  $("#stdin").value = p?.samples[i]?.input ?? "";
+}
+
+function renderStandings() {
+  const st = S.st;
+  const head = S.problems.map(p => `<th class="c">${p.id}</th>`).join("");
+  const rows = st.scoreboard.map(r => `<tr class="${r.name === st.me.name ? "mine" : ""}">
+    <td class="num">${r.rank}</td><td>${esc(r.name)}</td><td class="num"><b>${r.points}</b></td><td class="num">${r.penalty}</td>
+    ${S.problems.map(p => {
+      const c = r.cells[p.id];
+      if (c.solved) return `<td class="c cell cell-ok num">+${c.wrong || ""}<small>${c.minute} min</small></td>`;
+      if (c.wrong) return `<td class="c cell cell-bad num">&minus;${c.wrong}</td>`;
+      return `<td class="c muted">&middot;</td>`;
+    }).join("")}</tr>`).join("");
+  const timeNote = st.penalty ? `Time is the minute of each solve, plus ${st.penalty} minutes per rejected try before it.`
+                              : `Time is the total of the minutes when each problem was solved. Wrong tries cost nothing.`;
+  $("#t-standings").innerHTML = `<div class="tablewrap"><table><thead><tr><th>#</th><th>Name</th><th>Points</th><th>Time</th>${head}</tr></thead>
+    <tbody>${rows}</tbody></table><p class="note">+ means solved; +2 means solved after two wrong tries. &minus;2 means two wrong tries, not solved yet.
+    ${timeNote} Updates every few seconds.</p></div>`;
+}
+
+function renderSubs() {
+  const subs = S.st.submissions;
+  if (!subs.length) { $("#t-subs").innerHTML = `<p class="empty">No submissions yet.</p>`; return; }
+  $("#t-subs").innerHTML = `<div class="tablewrap"><table><thead><tr><th>#</th><th>When</th><th>Problem</th><th>Verdict</th><th>Tests</th><th>Time</th></tr></thead><tbody>
+    ${subs.map(s => `<tr class="click" data-id="${s.id}"><td class="num">${s.id}</td>
+      <td class="num">${s.in_contest ? `${s.minute} min` : `<span class="muted">practice</span>`}</td>
+      <td>${s.problem}</td><td class="v-${s.verdict}"><b>${VERDICT[s.verdict]}</b>${s.test ? ` on test ${s.test}` : ""}</td>
+      <td class="num">${s.passed}/${s.total}</td><td class="num">${s.time != null ? s.time.toFixed(2) + " s" : "-"}</td></tr>`).join("")}
+    </tbody></table><p class="note">Click a submission to see its verdict and load its code.</p></div>`;
+  for (const tr of document.querySelectorAll("#t-subs tr.click")) tr.onclick = () => {
+    const s = subs.find(x => x.id === +tr.dataset.id);
+    if (s.problem !== S.cur) selectProblem(s.problem);
+    renderResult(s, true);
+    setConsole("result");
+  };
+}
+
+function setTab(t) {
+  S.tab = t;
+  for (const b of document.querySelectorAll("[data-tab]")) b.classList.toggle("on", b.dataset.tab === t);
+  for (const id of ["problem", "standings", "subs"]) $("#t-" + id).hidden = id !== t;
+}
+for (const b of document.querySelectorAll("[data-tab]")) b.onclick = () => setTab(b.dataset.tab);
+
+function setConsole(t) {
+  for (const b of document.querySelectorAll("[data-ctab]")) b.classList.toggle("on", b.dataset.ctab === t);
+  $("#c-run").hidden = t !== "run";
+  $("#c-result").hidden = t !== "result";
+}
+for (const b of document.querySelectorAll("[data-ctab]")) b.onclick = () => setConsole(b.dataset.ctab);
+
+/* ---------- run + submit ---------- */
+function busy(on, label) {
+  S.busy = on;
+  $("#btn-run").disabled = $("#btn-submit").disabled = on;
+  $("#btn-submit").textContent = on && label === "submit" ? "Judging..." : "Submit";
+  $("#btn-run").textContent = on && label === "run" ? "Running..." : "Run";
+}
+
+async function doRun() {
+  if (S.busy || !S.problems) return;
+  saveDraft();
+  setConsole("run");
+  const out = $("#stdout");
+  out.className = "muted";
+  out.textContent = "Compiling and running...";
+  busy(true, "run");
+  try {
+    const r = await api("/api/run", { problem: S.cur, code: E.get(), input: $("#stdin").value });
+    let text = "", cls = "";
+    if (r.status === "CE") { text = r.compile_output; cls = "v-CE"; }
+    else {
+      text = r.output || (r.status === "OK" ? "(no output)" : "");
+      if (r.status === "TLE") text += `\n[Stopped: time limit exceeded]`;
+      if (r.status === "RE") text += `\n[Runtime error, exit code ${r.exit_code}]`;
+      if (r.stderr) text += `\n\n--- stderr ---\n${r.stderr}`;
+      if (r.status === "OK") text += `\n\n[Finished in ${r.time.toFixed(2)} s]`;
+      if (r.expected != null)
+        text += r.matches ? `\n[Matches the sample output]`
+                          : `\n[Does not match the sample output. ${r.diff ? diffText(r.diff) : ""}]\n\n--- expected ---\n${r.expected}`;
+      cls = r.status === "OK" ? (r.matches === false ? "v-WA" : "") : `v-${r.status}`;
+    }
+    out.className = cls;
+    out.textContent = text.trimStart();
+  } catch (e) { out.className = "v-WA"; out.textContent = e.message; }
+  busy(false);
+}
+
+const sameCode = (a, b) => a.replace(/\s+/g, " ").trim() === b.replace(/\s+/g, " ").trim();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// A short warning before a submission that can't help, or null if it looks fine.
+function submitWarning(code) {
+  if (sameCode(code, starterFor(S.cur))) return "This is still the starter code. Write your solution first.";
+  const prev = S.st.submissions.find(s => s.problem === S.cur && sameCode(s.code, code));
+  if (!prev) return null;
+  if (prev.verdict === "AC") return "This exact code was already accepted.";
+  return `You already submitted this exact code. It got ${VERDICT[prev.verdict].toLowerCase()}${prev.test ? ` on test ${prev.test}` : ""}.`;
+}
+
+function askConfirm(msg) {
+  $("#confirm-msg").textContent = msg;
+  $("#confirm").hidden = false;
+  $("#confirm-no").focus();
+}
+$("#confirm-no").onclick = () => { $("#confirm").hidden = true; };
+$("#confirm-yes").onclick = () => { $("#confirm").hidden = true; doSubmit(true); };
+
+async function doSubmit(force) {
+  if (S.busy || !S.problems) return;
+  saveDraft();
+  const code = E.get();
+  const warning = force === true ? null : submitWarning(code);
+  if (warning) return askConfirm(warning);
+  $("#confirm").hidden = true;
+  const pid = S.cur;
+  const alreadySolved = S.st.submissions.some(s => s.problem === pid && s.verdict === "AC");
+  setConsole("result");
+  busy(true, "submit");
+  try {
+    const { job, total } = await api("/api/submit", { problem: pid, code });
+    let j = { state: "queued", done: 0, total, tests: [] }, misses = 0;
+    while (j.state !== "done" && j.state !== "error") {
+      if (S.cur === pid) renderProgress(j);
+      await sleep(300);
+      try { j = await api(`/api/job?id=${job}`); misses = 0; }
+      catch (e) { if (++misses > 20) throw e; }
+    }
+    if (j.state === "error") throw new Error(j.error);
+    const sub = j.submission;
+    S.results[pid] = sub;
+    if (S.cur === pid) renderResult(sub);
+    else toast(`Problem ${pid}: <b class="v-${sub.verdict}">${VERDICT[sub.verdict]}</b>`, sub.verdict === "AC" ? "good" : "bad");
+    if (sub.verdict === "AC" && !alreadySolved) celebrate(pid, sub);
+    await refresh();
+  } catch (e) { $("#c-result").innerHTML = `<p class="v-WA">${esc(e.message)}</p>`; }
+  busy(false);
+}
+
+function renderProgress(j) {
+  const status = j.state === "queued" ? "Waiting for the judge to finish another program..."
+               : j.state === "compiling" ? "Compiling..."
+               : `Running test ${Math.min(j.done + 1, j.total)} of ${j.total}`;
+  const dots = Array.from({ length: j.total }, (_, i) => {
+    if (i < j.tests.length) return `<span class="dot AC">${i + 1}</span>`;
+    if (i === j.tests.length && j.state === "judging") return `<span class="dot run">${i + 1}</span>`;
+    return `<span class="dot">${i + 1}</span>`;
+  }).join("");
+  $("#c-result").innerHTML = `<p class="verdict muted" aria-live="polite">${status}</p><div class="dots">${dots}</div>`;
+}
+
+function diffText(d) {
+  if (d.got == null) return `Your output ends too early. Expected "${d.expected}" on line ${d.expected_line}.`;
+  if (d.expected == null) return `Your output has extra text: "${d.got}" on line ${d.got_line}.`;
+  return `First difference: expected "${d.expected}" on line ${d.expected_line}, but your output has "${d.got}" on line ${d.got_line}.`;
+}
+
+// Text as HTML with one line marked (1-based), for pointing at the first difference.
+function markLine(text, line) {
+  return String(text).replace(/\r/g, "").split("\n").map((l, i) => i + 1 === line ? `<mark>${esc(l) || " "}</mark>` : esc(l)).join("\n");
+}
+
+function renderResult(s, fromHistory) {
+  const box = $("#c-result");
+  if (!s) { box.innerHTML = `<p class="muted">Submit your code to see the verdict here.</p>`; return; }
+  const extra = [];
+  if (s.time != null) extra.push(`Slowest test: ${s.time.toFixed(2)} s.`);
+  if (!s.in_contest) extra.push(`Practice submission after the contest; it doesn't change the standings.`);
+  if (fromHistory) extra.push(`<button class="link" id="load-code">Load this code into the editor</button>`);
+  box.innerHTML = `${verdictHtml(s)}<p class="note">Submission #${s.id}. ${extra.join(" ")}</p>`;
+  const lc = $("#load-code");
+  if (lc) lc.onclick = () => { E.set(s.code); saveDraft(); };
+}
+
+// Verdict line, test boxes and failure details for one submission (shared with the host dashboard).
+function verdictHtml(s, who = "Your output") {
+  const title = s.verdict === "AC" ? `<b>Accepted</b> &middot; all ${s.total} tests passed`
+              : s.verdict === "CE" ? `<b>Compilation error</b>`
+              : `<b>${VERDICT[s.verdict]}</b> on test ${s.test} of ${s.total}`;
+  const dots = s.verdict === "CE" ? "" : `<div class="dots">${Array.from({ length: s.total }, (_, i) => {
+    const t = s.tests[i];
+    if (!t) return `<span class="dot">${i + 1}</span>`;
+    const cls = t.v === "AC" ? "AC" : `bad ${t.v}`;
+    return `<span class="dot ${cls}" title="Test ${i + 1}: ${VERDICT[t.v]}, ${t.t.toFixed(2)} s">${i + 1}</span>`;
+  }).join("")}</div>`;
+  let detail = "";
+  if (s.verdict === "CE") detail = `<div class="detail"><pre>${esc(s.compile_output)}</pre></div>`;
+  else if (s.failure?.hidden) detail = `<p class="note">Test ${s.test} is a hidden test. Its input is shown after the contest ends.</p>`;
+  else if (s.failure) {
+    const f = s.failure, d = s.verdict === "WA" ? f.diff : null;
+    const parts = [[f.sample ? `Input (sample)` : "Input", esc(f.input)]];
+    if (s.verdict === "WA") parts.push(["Expected", markLine(f.expected, d?.expected_line)],
+                                       [who, f.output ? markLine(f.output, d?.got_line) : "(no output)"]);
+    if (f.stderr) parts.push(["stderr", esc(f.stderr)]);
+    if (s.verdict === "RE" && f.exit_code != null) parts.push(["Exit code", String(f.exit_code)]);
+    detail = (d ? `<p class="diffnote">${esc(diffText(d))}</p>` : "") +
+      `<div class="detail">${parts.map(([h, v]) => `<div><h4>${h}</h4><pre>${v}</pre></div>`).join("")}</div>`;
+  }
+  return `<p class="verdict v-${s.verdict}">${title}</p>${dots}${detail}`;
+}
+
+const tpl = $("#btn-template");
+tpl.onclick = () => {
+  if (tpl.dataset.armed) { E.set(starterFor(S.cur)); saveDraft(); delete tpl.dataset.armed; tpl.textContent = "Reset code"; tpl.classList.remove("warn"); return; }
+  tpl.dataset.armed = "1"; tpl.textContent = "Click again to confirm"; tpl.classList.add("warn");
+  setTimeout(() => { delete tpl.dataset.armed; tpl.textContent = "Reset code"; tpl.classList.remove("warn"); }, 3500);
+};
+$("#who").addEventListener("click", async e => {
+  const hv = e.target.closest("[data-hv]")?.dataset.hv;
+  if (hv) {
+    S.hostView = hv;
+    local.set("judge-hostview", hv);
+    return refresh();
+  }
+  if (e.target.id !== "btn-reset") return;
+  if (!S.resetArmed) {
+    S.resetArmed = true;
+    e.target.textContent = "Click again: delete all submissions and restart";
+    setTimeout(() => { S.resetArmed = false; }, 5000);
+    return;
+  }
+  S.resetArmed = false;
+  await api("/api/reset", {}).catch(err => toast(esc(err.message), "bad"));
+  S.results = {};
+  refresh();
+});
+$("#btn-run").onclick = doRun;
+$("#btn-submit").onclick = doSubmit;
+$("#stdin").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doRun(); } });
+window.addEventListener("beforeunload", saveDraft);
+
+// The link and join code a host sends to friends. c needs share_url, share_mode, join_code and title.
+function renderInvite(box, c) {
+  box.hidden = !c.share_url;
+  if (!c.share_url || box.dataset.url === c.share_url) return;
+  box.dataset.url = c.share_url;
+  const where = c.share_mode === "online" ? "from anywhere" : "on the same Wi-Fi";
+  box.innerHTML = `<p style="margin:0 0 10px">Your friend opens <code>${esc(c.share_url)}</code> ${where} and joins with code
+    <code>${esc(c.join_code)}</code>.</p><button class="btn" type="button" data-invite>Copy invite message</button>`;
+  const invite = `Join my contest "${c.title}"\nLink: ${c.share_url}\nJoin code: ${c.join_code}`;
+  box.querySelector("[data-invite]").onclick = async e => {
+    try { await navigator.clipboard.writeText(invite); e.target.textContent = "Copied. Paste it to your friend"; }
+    catch { e.target.textContent = "Copy failed. Select the link above instead"; }
+  };
+}
+
+/* ---------- host dashboard ---------- */
+const VCLS = { AC: "good", WA: "bad", OLE: "bad", TLE: "tle", RE: "re", CE: "ce" };
+const VCOLOR = { AC: "--ac", WA: "--wa", OLE: "--wa", TLE: "--tle", RE: "--re", CE: "--ce" };
+const ago = s => s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)} min ago` : `${Math.floor(s / 3600)} h ago`;
+const clockTime = t => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+let hostLoading = false;
+
+async function hostRefresh() {
+  if (hostLoading || S.view !== "host") return;
+  hostLoading = true;
+  try { S.H = await api("/api/host"); renderHost(S.H); }
+  catch (e) { $("#h-sub").textContent = e.message; }
+  hostLoading = false;
+}
+setInterval(hostRefresh, 2000);
+
+function presence(p) {
+  if (p.online_ago == null) return ["off", "Not connected yet"];
+  if (p.online_ago < 12) return ["on", "Online"];
+  if (p.online_ago < 60) return ["idle", `Idle, seen ${ago(p.online_ago)}`];
+  return ["off", `Offline, seen ${ago(p.online_ago)}`];
+}
+
+// What a participant is doing right now, or "" when that is hidden or unknown.
+function activity(p, c) {
+  if (c.private || c.phase === "lobby") return "";
+  const j = p.judging;
+  if (j) return j.state === "queued" ? `Waiting to be judged on ${j.problem}`
+              : j.state === "compiling" ? `Compiling ${j.problem}`
+              : `Judging ${j.problem}: test ${Math.min(j.done + 1, j.total)} of ${j.total}`;
+  const bits = [];
+  if (p.viewing) bits.push(`Viewing ${p.viewing}`);
+  if (p.last_run_ago != null && p.last_run_ago < 120) bits.push(`ran code on ${p.last_run_problem} ${ago(p.last_run_ago)}`);
+  return bits.join(", ");
+}
+
+function renderHost(H) {
+  const c = H.contest, lobby = c.phase === "lobby", probs = H.problems, people = H.participants;
+  $("#h-title").textContent = c.title;
+  $("#h-sub").textContent = lobby ? "Waiting room. The contest hasn't started yet."
+    : c.phase === "running" ? `Live. Started at ${clockTime(c.start)}.`
+    : "Finished. All code and hidden test details are now visible.";
+  $("#h-private").hidden = !c.private;
+  renderHostActions(c);
+  renderInvite($("#h-share"), c);
+
+  const online = people.filter(p => p.online_ago != null && p.online_ago < 12).length;
+  const accepted = H.submissions.filter(s => s.verdict === "AC").length;
+  const solves = probs.reduce((a, p) => a + p.solved_by, 0);
+  const q = H.queue[0];
+  const judgeNote = !H.queue_count ? "Nothing waiting"
+    : q ? `${esc(q.name)} · ${q.problem} · ${q.state === "judging" ? `test ${Math.min(q.done + 1, q.total)} of ${q.total}` : q.state}${H.queue_count > 1 ? ` · ${H.queue_count - 1} waiting` : ""}`
+    : `${H.queue_count} in progress`;
+  const tile = (k, v, s) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s" title="${s}">${s}</div></div>`;
+  $("#h-tiles").innerHTML = tile("Participants", people.length, `${online} online now`)
+    + tile("Submissions", H.submissions.length, `${accepted} accepted`)
+    + tile("Problems solved", solves, `of ${people.length * probs.length} possible`)
+    + tile("Judge", H.queue_count ? "Busy" : "Idle", judgeNote);
+
+  $("#h-people-note").textContent = lobby ? `${people.length} joined`
+    : c.private ? "Live activity is hidden while you compete"
+    : "An outlined box is the problem they have open";
+  if (!people.length) {
+    $("#h-people").innerHTML = `<p class="empty">Nobody has joined yet. Send your friends the invite above.</p>`;
+  } else {
+    const head = lobby ? `<th>Participant</th><th></th>`
+      : `<th>#</th><th>Participant</th><th>Points</th><th>Time</th>${probs.map(p => `<th class="c">${p.id}</th>`).join("")}<th>Subs</th>`;
+    const rows = people.map(p => {
+      const [dot, label] = presence(p);
+      const status = [label, activity(p, c)].filter(Boolean).join(" · ");
+      const name = `<td class="pname"><span class="pdot ${dot}"></span><b>${esc(p.name)}</b>${p.host ? `<span class="tag">host</span>` : ""}<small>${esc(status)}</small></td>`;
+      if (lobby) {
+        const armed = S.removeArmed === p.name;
+        return `<tr>${name}<td class="c"><button class="link ${armed ? "warn" : ""}" data-remove="${esc(p.name)}">${armed ? "Click again to remove" : "Remove"}</button></td></tr>`;
+      }
+      const cells = probs.map(pr => {
+        const cell = p.cells[pr.id], judging = p.judging?.problem === pr.id;
+        const cls = ["hc", cell.solved ? "cell-ok" : cell.wrong ? "cell-bad" : "muted",
+                     judging ? "judging" : "", !c.private && p.viewing === pr.id ? "viewing" : ""].join(" ");
+        const text = judging ? "judging" : cell.solved ? `&check; ${cell.minute}m${cell.wrong ? `<small>+${cell.wrong} tries</small>` : ""}`
+                   : cell.wrong ? `&minus;${cell.wrong}` : "&middot;";
+        return `<td class="${cls} cell num">${text}</td>`;
+      }).join("");
+      return `<tr><td class="num">${p.rank}</td>${name}<td class="num"><b>${p.points}</b></td><td class="num">${p.penalty}</td>${cells}<td class="num">${p.submissions}</td></tr>`;
+    }).join("");
+    $("#h-people").innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  const li = (cls, t, html, id) => `<li class="ev ${cls}"${id ? ` data-sub="${id}"` : ""}><span class="ev-t">${t}</span><span class="ev-dot"></span><span>${html}</span></li>`;
+  $("#h-feed").innerHTML = H.feed.map(e => {
+    const t = c.start && e.at >= c.start ? `${Math.floor((e.at - c.start) / 60)}m` : clockTime(e.at);
+    if (e.type === "join") return li("info", t, `<b>${esc(e.name)}</b> joined`);
+    if (e.type === "start") return li("info", t, "Contest started");
+    const title = probs.find(p => p.id === e.problem)?.title ?? "";
+    const text = e.first_ac ? `<b>${esc(e.name)}</b> solved <b>${e.problem}. ${esc(title)}</b>`
+      : `<b>${esc(e.name)}</b> · ${e.problem} · ${VERDICT[e.verdict]}${e.test ? ` on test ${e.test}` : ""}`;
+    return li(VCLS[e.verdict], t, text + (e.in_contest ? "" : ` <span class="muted">(practice)</span>`), e.id);
+  }).join("") || `<li class="empty">Nothing yet.</li>`;
+
+  const order = ["AC", "WA", "TLE", "RE", "OLE", "CE"];
+  $("#h-problems").innerHTML = `<table><thead><tr><th>Problem</th><th>Solved by</th><th>Attempts</th><th>Verdicts</th><th>First solve</th></tr></thead><tbody>
+    ${probs.map(p => {
+      const counts = order.filter(k => p.verdicts[k]).map(k => [k, p.verdicts[k]]);
+      const bar = counts.length
+        ? `<div class="vbar" title="${counts.map(([k, v]) => `${VERDICT[k]}: ${v}`).join(", ")}">${counts.map(([k, v]) => `<span style="flex:${v};background:var(${VCOLOR[k]})"></span>`).join("")}</div>
+           <small class="muted">${counts.map(([k, v]) => `${k} ${v}`).join(" · ")}</small>`
+        : `<span class="muted">No submissions</span>`;
+      return `<tr><td><b>${p.id}</b>. ${esc(p.title)}</td><td class="num">${p.solved_by} of ${people.length}</td><td class="num">${p.attempts}</td>
+        <td>${bar}</td><td>${p.first_solve ? `${esc(p.first_solve.name)} at ${p.first_solve.minute} min` : `<span class="muted">Not yet</span>`}</td></tr>`;
+    }).join("")}</tbody></table>`;
+
+  $("#h-subs-note").textContent = c.private ? "Code unlocks when the contest ends" : "Click one to see its code";
+  $("#h-subs").innerHTML = !H.submissions.length ? `<p class="empty">No submissions yet.</p>`
+    : `<table><thead><tr><th>#</th><th>When</th><th>Participant</th><th>Problem</th><th>Verdict</th><th>Tests</th><th>Time</th></tr></thead><tbody>
+      ${H.submissions.map(s => `<tr class="click" data-id="${s.id}"><td class="num">${s.id}</td>
+        <td class="num">${s.in_contest ? `${s.minute} min` : `<span class="muted">practice</span>`}</td><td>${esc(s.name)}</td><td>${s.problem}</td>
+        <td class="v-${s.verdict}"><b>${VERDICT[s.verdict]}</b>${s.test ? ` on test ${s.test}` : ""}</td>
+        <td class="num">${s.passed}/${s.total}</td><td class="num">${s.time != null ? s.time.toFixed(2) + " s" : "-"}</td></tr>`).join("")}
+      </tbody></table>`;
+  announceHost(H);
+}
+
+// Notices for the host when someone joins or solves a problem.
+function announceHost(H) {
+  const names = new Set(H.participants.map(p => p.name));
+  const solves = new Map();
+  for (const p of H.participants) for (const pr of H.problems)
+    if (p.cells[pr.id].solved) solves.set(`${p.name}|${pr.id}`, [p, pr]);
+  const prev = S.hostSeen;
+  S.hostSeen = { names, solves };
+  if (!prev) return;
+  for (const n of names) if (!prev.names.has(n)) toast(`<b>${esc(n)}</b> joined.`, "info", 8000);
+  for (const [k, [p, pr]] of solves) if (!prev.solves.has(k))
+    toast(`<b>${esc(p.name)}</b> solved <b>${pr.id}. ${esc(pr.title)}</b> at ${p.cells[pr.id].minute} min.`, "good", 10000);
+}
+
+function renderHostActions(c) {
+  const box = $("#h-actions");
+  const key = [c.phase, !!S.st.me, !!S.resetArmed, !!S.competeOpen].join("|");
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  const parts = [];
+  if (c.phase === "lobby") parts.push(`<button class="btn primary" type="button" id="h-start">Start the contest</button>`);
+  if (!S.st.me) parts.push(S.competeOpen
+    ? `<form class="compete" id="h-compete"><input id="h-name" maxlength="24" placeholder="Your name" aria-label="Your name" required>
+         <button class="btn" type="submit">Join as a player</button><button class="link" type="button" id="h-compete-cancel">Cancel</button></form>`
+    : `<button class="btn" type="button" id="h-compete-open" title="Join as a player too. Code and live activity then stay hidden until the contest ends.">Compete too</button>`);
+  if (c.phase !== "lobby") parts.push(`<button class="btn warn" type="button" id="h-reset">${S.resetArmed ? "Click again: delete all submissions" : "Reset contest"}</button>`);
+  box.innerHTML = parts.join("");
+  const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
+  on("#h-start", "click", async () => { await api("/api/start", {}).catch(e => toast(esc(e.message), "bad")); await refresh(); hostRefresh(); });
+  on("#h-compete-open", "click", () => { S.competeOpen = true; renderHostActions(c); $("#h-name")?.focus(); });
+  on("#h-compete-cancel", "click", () => { S.competeOpen = false; renderHostActions(c); });
+  on("#h-compete", "submit", async e => {
+    e.preventDefault();
+    try {
+      const r = await api("/api/join", { name: $("#h-name").value });
+      S.token = r.token;
+      local.set("judge-token", r.token);
+      S.competeOpen = false;
+      toast("You joined as a player. Use <b>My contest</b> in the top bar to solve problems.", "good", 8000);
+      await refresh();
+      hostRefresh();
+    } catch (err) { toast(esc(err.message), "bad"); }
+  });
+  on("#h-reset", "click", async () => {
+    if (!S.resetArmed) {
+      S.resetArmed = true;
+      renderHostActions(c);
+      setTimeout(() => { S.resetArmed = false; if (S.H) renderHostActions(S.H.contest); }, 5000);
+      return;
+    }
+    S.resetArmed = false;
+    await api("/api/reset", {}).catch(err => toast(esc(err.message), "bad"));
+    S.results = {};
+    S.hostSeen = null;
+    await refresh();
+    hostRefresh();
+  });
+}
+
+async function openHostSubmission(id) {
+  let s;
+  try { s = await api(`/api/host/submission?id=${id}`); }
+  catch (e) { return toast(esc(e.message), "warn", 6000); }
+  const title = S.H?.problems.find(p => p.id === s.problem)?.title ?? "";
+  const code = String(s.code).replace(/\r/g, "").split("\n").map((l, i) => `<span class="ln">${i + 1}</span>${esc(l)}`).join("\n");
+  openModal(`<h2 id="modal-title">#${s.id} · ${esc(s.name)} · ${s.problem}. ${esc(title)}</h2>
+    <p class="muted">${s.in_contest ? `Submitted at ${s.minute} min` : "Practice submission after the contest"} (${clockTime(s.at)})${s.time != null ? `. Slowest test ${s.time.toFixed(2)} s.` : "."}</p>
+    ${verdictHtml(s, "Their output")}
+    <div class="detail" style="margin-top:12px"><div><h4>Code</h4><pre class="code">${code}</pre></div></div>
+    <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" data-act="close">Close</button></div>`, true);
+}
+
+$("#h-feed").addEventListener("click", e => { const id = e.target.closest("[data-sub]")?.dataset.sub; if (id) openHostSubmission(id); });
+$("#h-subs").addEventListener("click", e => { const id = e.target.closest("tr[data-id]")?.dataset.id; if (id) openHostSubmission(id); });
+$("#h-people").addEventListener("click", async e => {
+  const name = e.target.closest("[data-remove]")?.dataset.remove;
+  if (!name) return;
+  if (S.removeArmed !== name) {
+    S.removeArmed = name;
+    if (S.H) renderHost(S.H);
+    setTimeout(() => { if (S.removeArmed === name) { S.removeArmed = null; if (S.H) renderHost(S.H); } }, 4000);
+    return;
+  }
+  S.removeArmed = null;
+  await api("/api/host/remove", { name }).catch(err => toast(esc(err.message), "bad"));
+  hostRefresh();
+});
+
+/* ---------- notices + pop-ups ---------- */
+const ICON = {
+  sun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`,
+  moon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+  clock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+};
+
+// html must already be escaped where it holds names or messages.
+function toast(html, kind = "info", ms = 5000) {
+  const t = document.createElement("div");
+  t.className = `toast ${kind}`;
+  t.innerHTML = html;
+  t.onclick = () => t.remove();
+  $("#toasts").appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+function openModal(html, wide = false) {
+  $("#modal").innerHTML = html;
+  $("#modal").classList.toggle("wide", wide);
+  $("#overlay").hidden = false;
+  $("#modal").querySelector("button")?.focus();
+}
+function closeModal() { $("#overlay").hidden = true; }
+$("#overlay").addEventListener("click", e => {
+  if (e.target.id === "overlay") return closeModal();
+  const act = e.target.closest("[data-act]")?.dataset.act;
+  if (!act) return;
+  closeModal();
+  if (act === "next") selectProblem(e.target.closest("[data-act]").dataset.p);
+  if (act === "standings") setTab("standings");
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#overlay").hidden) closeModal(); });
+
+const CHEERS = ["Brilliant work", "Nailed it", "Great solve", "Well done", "Superb", "Excellent job"];
+const LINES = [
+  "Every accepted solution makes the next one easier.",
+  "Your hard work is paying off. Keep going!",
+  "Clean solve. On to the next one.",
+  "You're building real problem-solving strength.",
+  "Keep this momentum going. You're doing great.",
+  "Solid thinking. The next problem is waiting for you.",
+];
+const pick = xs => xs[Math.floor(Math.random() * xs.length)];
+
+function celebrate(pid, sub) {
+  const p = S.problems.find(x => x.id === pid);
+  const name = esc(S.st.me.name);
+  const solved = new Set(S.st.submissions.filter(s => s.verdict === "AC").map(s => s.problem)).add(pid);
+  const next = S.problems.find(q => !solved.has(q.id));
+  const title = next ? `${pick(CHEERS)}, ${name}!` : `Incredible, ${name}!`;
+  const line = next ? pick(LINES) : "You solved every problem in the contest. Be proud of this one.";
+  const pts = sub.in_contest ? `+${p.points} points.` : "Practice solve, so the standings don't change.";
+  openModal(`<div class="badge">${ICON.check}</div>
+    <h2 id="modal-title">${title}</h2>
+    <p class="lead">${p.id}. ${esc(p.title)} is accepted. ${pts}</p>
+    <p class="muted">${line}</p>
+    <div class="row">${next ? `<button class="btn primary" data-act="next" data-p="${next.id}">Next: ${next.id}. ${esc(next.title)}</button>` : ""}
+      <button class="btn ${next ? "" : "primary"}" data-act="close">Close</button></div>`);
+  confetti();
+}
+
+function showContestOver() {
+  const row = myRow();
+  if (!row) return;
+  const solved = S.problems.filter(p => row.cells[p.id].solved).map(p => p.id);
+  openModal(`<div class="badge clock">${ICON.clock}</div>
+    <h2 id="modal-title">Time's up, ${esc(S.st.me.name)}!</h2>
+    <p class="lead">You finished rank ${row.rank} of ${S.st.scoreboard.length} with ${row.points} points.</p>
+    <p class="muted">${solved.length ? `You solved ${solved.join(", ")}. Great effort today.` : "Every contest makes you stronger. Keep going."}
+      You can keep solving for practice.</p>
+    <div class="row"><button class="btn primary" data-act="standings">See standings</button>
+      <button class="btn" data-act="close">Keep practicing</button></div>`);
+}
+
+function confetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv = $("#confetti"), ctx = cv.getContext("2d");
+  cv.width = innerWidth; cv.height = innerHeight; cv.hidden = false;
+  const css = getComputedStyle(document.documentElement);
+  const colors = ["--ac", "--accent", "--tle", "--re", "--wa"].map(v => css.getPropertyValue(v).trim());
+  const bits = Array.from({ length: 110 }, () => ({
+    x: innerWidth / 2, y: innerHeight * .42, vx: (Math.random() - .5) * 15, vy: -Math.random() * 13 - 3,
+    s: 5 + Math.random() * 6, r: Math.random() * 6, vr: (Math.random() - .5) * .35, c: pick(colors),
+  }));
+  const t0 = performance.now();
+  (function frame(t) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (const b of bits) {
+      b.vy += .35; b.x += b.vx; b.y += b.vy; b.vx *= .99; b.r += b.vr;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c;
+      ctx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2); ctx.restore();
+    }
+    if (t - t0 < 1800) requestAnimationFrame(frame); else cv.hidden = true;
+  })(t0);
+}
+
+/* ---------- theme ---------- */
+const darkQuery = matchMedia("(prefers-color-scheme: dark)");
+const theme = () => document.documentElement.dataset.theme || (darkQuery.matches ? "dark" : "light");
+function paintThemeButton() {
+  const dark = theme() === "dark", label = dark ? "Switch to light theme" : "Switch to dark theme";
+  const b = $("#btn-theme");
+  b.innerHTML = dark ? ICON.sun : ICON.moon;
+  b.setAttribute("aria-label", label);
+  b.title = label;
+}
+$("#btn-theme").onclick = () => {
+  const next = theme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  local.set("judge-theme", next);
+  paintThemeButton();
+};
+darkQuery.addEventListener("change", paintThemeButton);
+paintThemeButton();
+
+/* ---------- draggable panels ---------- */
+const arena = $(".arena");
+function applySplit(r) {
+  S.split = Math.min(.75, Math.max(.25, r || .47));
+  arena.style.setProperty("--split", S.split);
+}
+function applyConsole(h) {
+  const max = Math.max(120, $("#edpane").clientHeight - 160);
+  S.consoleH = Math.round(Math.max(120, Math.min(max, h)));
+  $("#console").style.height = S.consoleH + "px";
+}
+function dragger(handle, cls, onMove, onKey, onReset, save) {
+  // Track the pointer on window, so a fast drag that leaves the handle (or the editor) still follows.
+  handle.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    handle.classList.add("drag");
+    document.body.classList.add("dragging", cls);
+    const move = ev => onMove(ev);
+    const stop = () => {
+      removeEventListener("pointermove", move);
+      removeEventListener("pointerup", stop);
+      removeEventListener("pointercancel", stop);
+      handle.classList.remove("drag");
+      document.body.classList.remove("dragging", cls);
+      save();
+    };
+    addEventListener("pointermove", move);
+    addEventListener("pointerup", stop);
+    addEventListener("pointercancel", stop);
+  });
+  handle.addEventListener("dblclick", () => { onReset(); save(); });
+  handle.addEventListener("keydown", e => { if (onKey(e.key)) { e.preventDefault(); save(); } });
+}
+dragger($("#g-cols"), "cols",
+  e => {
+    const left = $("#plist").getBoundingClientRect().right, right = arena.getBoundingClientRect().right;
+    applySplit((e.clientX - left) / (right - left - 6));
+  },
+  k => k === "ArrowLeft" ? (applySplit(S.split - .03), true) : k === "ArrowRight" ? (applySplit(S.split + .03), true) : false,
+  () => applySplit(.47),
+  () => local.set("judge-split", S.split));
+dragger($("#g-rows"), "rows",
+  e => applyConsole($("#edpane").getBoundingClientRect().bottom - e.clientY - 3),
+  k => k === "ArrowUp" ? (applyConsole($("#console").offsetHeight + 24), true)
+     : k === "ArrowDown" ? (applyConsole($("#console").offsetHeight - 24), true) : false,
+  () => { $("#console").style.height = ""; S.consoleH = 0; },
+  () => local.set("judge-console", S.consoleH || ""));
+applySplit(+local.get("judge-split"));
+new ResizeObserver(() => E?.refresh()).observe($("#editor"));
+
+makeEditor();
+refresh();
+setInterval(refresh, 4000);
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D: Networking Night</title><style>
+:root{--ink:#1c2230;--muted:#5b6475;--paper:#ffffff;--panel:#f3f5f9;--line:#d7dce6;--accent:#2f5d8a}
+@media (prefers-color-scheme:dark){:root{--ink:#e4e8ef;--muted:#9aa4b5;--paper:#151a22;--panel:#1e2530;--line:#313a48;--accent:#8db4dc}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+a{color:var(--accent)} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{border-bottom:2px solid var(--ink);padding-bottom:1rem;margin-bottom:1.5rem}
+.letter{font:600 1rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .4rem}
+h1{font-size:2.1rem;line-height:1.15;margin:0 0 .6rem;font-weight:700}
+.meta{font:0.9rem/1.4 system-ui,sans-serif;color:var(--muted);margin:0}
+h2{font:700 1.05rem/1.3 system-ui,sans-serif;margin:2rem 0 .5rem;color:var(--ink)}
+p,li{max-width:70ch} ul{padding-left:1.3rem}
+code,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+p code,li code{background:var(--panel);padding:.05em .3em;border-radius:3px}
+.sample{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0 .5rem}
+.sample div{min-width:0}
+.sample h3{font:600 .85rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .35rem}
+pre{margin:0;background:var(--panel);border-left:3px solid var(--accent);padding:.6rem .8rem;overflow-x:auto;line-height:1.45}
+.explain{color:var(--ink);margin:.4rem 0 1.6rem}
+.explain strong{font-family:system-ui,sans-serif;font-size:.9em}
+nav.back{font:0.9rem system-ui,sans-serif;margin-bottom:1.5rem}
+ol.problems{list-style:none;padding:0;margin:0}
+ol.problems li{border-top:1px solid var(--line);padding:1rem 0}
+ol.problems a{font-size:1.3rem;font-weight:700;text-decoration:none}
+ol.problems .meta{margin-top:.2rem}
+@media (max-width:560px){.sample{grid-template-columns:1fr} h1{font-size:1.7rem}}
+@media print{nav.back{display:none} pre{border-left-color:#000}}
+</style></head>
+<body><main><nav class="back"><a href="../index.html">All problems</a></nav><header><p class="letter">Problem D</p><h1>Networking Night</h1><p class="meta">Difficulty: hard. Time limit: 1 second.</p></header>
+<p>It's the freshers' party at Sitare, and the hall is packed. The hall is a grid with <i>R</i> rows and <i>C</i> columns, and every cell has a senior standing in it. Every senior has an <i>aura</i>: the senior in cell (<i>i</i>, <i>j</i>) has aura <i>a</i>[<i>i</i>][<i>j</i>].</p>
+<p>Aarav, a nervous fresher, starts in cell (<i>sr</i>, <i>sc</i>) with a confidence of <i>c</i><sub>0</sub>. He can walk up to a senior in a cell that is <b>adjacent</b> (up, down, left or right) to any cell he has already been in, but he only dares to talk to them if their aura is <b>strictly less</b> than his current confidence.</p>
+<p>Every conversation goes well: after talking to a senior, Aarav's confidence increases by that senior's aura, and from then on he can walk through that senior's cell freely.</p>
+<p>What is the maximum confidence Aarav can end the party with?</p>
+<h2>Input</h2>
+<p>The first line contains three integers <i>R</i>, <i>C</i> and <i>c</i><sub>0</sub> (1 &le; <i>R</i>, <i>C</i> &le; 200, 1 &le; <i>c</i><sub>0</sub> &le; 10<sup>9</sup>).</p>
+<p>The second line contains two integers <i>sr</i> and <i>sc</i> (1 &le; <i>sr</i> &le; <i>R</i>, 1 &le; <i>sc</i> &le; <i>C</i>), Aarav's starting cell, numbered from 1.</p>
+<p>The next <i>R</i> lines each contain <i>C</i> integers, the auras <i>a</i>[<i>i</i>][<i>j</i>] (1 &le; <i>a</i>[<i>i</i>][<i>j</i>] &le; 10<sup>9</sup>). The starting cell is empty, so its value is always given as 0.</p>
+<h2>Output</h2>
+<p>Print a single integer: Aarav's maximum possible confidence at the end of the party.</p>
+<h2>Examples</h2>
+<div class="sample"><div><h3>Sample input 1</h3><pre>3 4 3
+2 2
+5 1 20 3
+2 0 8 500
+30 4 9 1
+</pre></div><div><h3>Sample output 1</h3><pre>86
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Aarav ends the party having talked to every senior except the one with aura 500. His final confidence is 3 + (5 + 1 + 20 + 3 + 2 + 8 + 30 + 4 + 9 + 1) = 86.</p>
+<div class="sample"><div><h3>Sample input 2</h3><pre>1 3 5
+1 2
+7 0 9
+</pre></div><div><h3>Sample output 2</h3><pre>5
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Both of Aarav's neighbours have an aura of at least 5, so he never dares to talk to anyone and his confidence stays at 5.</p></main></body></html>
