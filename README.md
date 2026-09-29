@@ -5,6 +5,38 @@ A local programming contest for Java: read problems, write code in the browser, 
 
 Needs **Python 3.10+** and a **JDK 17+** (`java` and `javac` on your PATH). Nothing else to install.
 
+## Set up on a new laptop (Windows)
+
+1. Open **PowerShell** and install what's missing. Skip anything you already have:
+   ```
+   winget install --id Git.Git
+   winget install --id Python.Python.3.12
+   winget install --id EclipseAdoptium.Temurin.21.JDK
+   ```
+   To host contests for friends in other places, also install:
+   ```
+   winget install --id Cloudflare.cloudflared
+   ```
+2. **Close PowerShell and open a new window**, so it finds the new programs. Check that Java works:
+   ```
+   javac -version
+   ```
+3. Download the contest to your Desktop:
+   ```
+   cd $HOME\Desktop
+   git clone https://github.com/manishtiwari2/contest-self.git
+   cd contest-self
+   ```
+4. For an empty lobby, delete the `data` folder. It holds the results of the last contest run on the laptop the
+   code was pushed from:
+   ```
+   Remove-Item -Recurse -Force data
+   ```
+5. Start it: double-click `start.bat` to practise alone, or `start-online.bat` to host a contest for friends
+   anywhere.
+
+To get the latest version later, run `git pull` inside the `contest-self` folder.
+
 ## Start a contest
 
 | To | Run |
