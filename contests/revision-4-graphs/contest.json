@@ -1,0 +1,52 @@
+{
+  "title": "Revision 4: Graphs and Advanced Graphs",
+  "duration_minutes": 1440,
+  "time_limit_seconds": 2,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {
+      "folder": "A-bfs-shortest-steps",
+      "points": 100
+    },
+    {
+      "folder": "B-dfs-connected-groups",
+      "points": 100
+    },
+    {
+      "folder": "C-number-of-islands",
+      "points": 100
+    },
+    {
+      "folder": "D-course-schedule",
+      "points": 100
+    },
+    {
+      "folder": "E-rotting-oranges",
+      "points": 100
+    },
+    {
+      "folder": "F-network-delay-time",
+      "points": 100
+    },
+    {
+      "folder": "G-union-find",
+      "points": 100
+    },
+    {
+      "folder": "H-redundant-connection",
+      "points": 100
+    },
+    {
+      "folder": "I-min-cost-to-connect-points",
+      "points": 100
+    },
+    {
+      "folder": "J-cheapest-flights-within-k-stops",
+      "points": 100
+    },
+    {
+      "folder": "K-floyd-warshall",
+      "points": 100
+    }
+  ]
+}

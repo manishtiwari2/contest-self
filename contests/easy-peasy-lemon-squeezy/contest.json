@@ -1,0 +1,11 @@
+{
+  "title": "Easy Peasy Lemon Squeezy",
+  "duration_minutes": 60,
+  "time_limit_seconds": 1,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {"folder": "A-canteen-combo", "points": 100},
+    {"folder": "B-bracket-police", "points": 100},
+    {"folder": "C-repeat-mode-off", "points": 100}
+  ]
+}

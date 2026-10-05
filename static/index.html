@@ -12,7 +12,7 @@
 :root{
   --ink:#1c2230; --muted:#5b6475; --paper:#ffffff; --panel:#f3f5f9; --sunk:#e9edf3; --line:#d7dce6;
   --accent:#2f5d8a; --accent-ink:#ffffff; --code:#fbfcfd; --shadow:rgba(28,34,48,.18);
-  --ac:#1a7f4b; --wa:#c23b3b; --tle:#a86b00; --re:#7b4fd6; --ce:#5b6475;
+  --ac:#1a7f4b; --wa:#c23b3b; --tle:#a86b00; --re:#7b4fd6; --ce:#5b6475; --atom:#b5179e;
   --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Consolas,Menlo,monospace;
   --serif:Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif;
@@ -21,12 +21,12 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --ink:#e4e8ef; --muted:#9aa4b5; --paper:#151a22; --panel:#1e2530; --sunk:#252d3a; --line:#313a48;
   --accent:#8db4dc; --accent-ink:#10161f; --code:#12171e; --shadow:rgba(0,0,0,.5);
-  --ac:#4cc38a; --wa:#ff7b7b; --tle:#e6b450; --re:#b69cff; --ce:#9aa4b5; color-scheme:dark;
+  --ac:#4cc38a; --wa:#ff7b7b; --tle:#e6b450; --re:#b69cff; --ce:#9aa4b5; --atom:#ff8fd8; color-scheme:dark;
 }}
 :root[data-theme="dark"]{
   --ink:#e4e8ef; --muted:#9aa4b5; --paper:#151a22; --panel:#1e2530; --sunk:#252d3a; --line:#313a48;
   --accent:#8db4dc; --accent-ink:#10161f; --code:#12171e; --shadow:rgba(0,0,0,.5);
-  --ac:#4cc38a; --wa:#ff7b7b; --tle:#e6b450; --re:#b69cff; --ce:#9aa4b5; color-scheme:dark;
+  --ac:#4cc38a; --wa:#ff7b7b; --tle:#e6b450; --re:#b69cff; --ce:#9aa4b5; --atom:#ff8fd8; color-scheme:dark;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -167,6 +167,8 @@ tr.click:hover td{background:var(--sunk)}
 .edpane{display:flex;flex-direction:column;min-height:0}
 .edbar{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .edbar .file{font:500 13px var(--mono);color:var(--muted);margin-right:auto}
+.edbar select.btn{padding:5px 8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .editor{flex:1;min-height:260px;position:relative;background:var(--code)}
 .editor .CodeMirror,.editor textarea{position:absolute;inset:0;height:100%;width:100%}
 .editor textarea{border:0;padding:10px;resize:none;background:var(--code);font:14px/1.5 var(--mono);tab-size:4}
@@ -183,6 +185,10 @@ tr.click:hover td{background:var(--sunk)}
 .cm-s-default .cm-comment{color:var(--muted);font-style:italic}
 .cm-s-default .cm-def{color:var(--ink);font-weight:600}
 .cm-s-default .cm-variable,.cm-s-default .cm-operator,.cm-s-default .cm-meta{color:var(--ink)}
+.cm-s-default .cm-atom{color:var(--atom);font-weight:600}
+.cm-s-default .cm-builtin{color:var(--re)}
+.cm-s-default .cm-string-2{color:var(--ac)}
+.cm-s-default .cm-variable-2,.cm-s-default .cm-property,.cm-s-default .cm-qualifier,.cm-s-default .cm-attribute,.cm-s-default .cm-bracket{color:var(--ink)}
 
 .console{height:38%;min-height:120px;display:flex;flex-direction:column;flex:none}
 .edpane{min-width:0}
@@ -327,7 +333,12 @@ pre.code .ln{display:inline-block;width:3.2em;padding-right:1em;text-align:right
          aria-label="Drag to resize the problem and editor panels" title="Drag to resize. Double-click to reset."></div>
     <div class="edpane" id="edpane">
       <div class="edbar">
-        <span class="file">Main.java &middot; Java</span>
+        <span class="file" id="file-name">Main.java</span>
+        <label class="sr" for="lang">Language</label>
+        <select id="lang" class="btn" title="Choose your language">
+          <option value="java">Java</option>
+          <option value="python">Python</option>
+        </select>
         <button class="btn" id="btn-template" title="Replace your code with the starter code">Reset code</button>
         <button class="btn" id="btn-run" title="Ctrl+Enter">Run</button>
         <button class="btn primary" id="btn-submit">Submit</button>
@@ -379,11 +390,26 @@ pre.code .ln{display:inline-block;width:3.2em;padding-right:1em;text-align:right
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 <script>
-// Used when a problem folder has no Main.java starter of its own.
-const TEMPLATE = `import java.io.*;
+// Used when a problem folder has no Main.java / main.py starter of its own.
+const TEMPLATES = {};
+TEMPLATES.python = `import sys
+
+
+def main():
+    input = sys.stdin.readline
+
+    n = int(input())
+
+    print(n)
+
+
+main()
+`;
+TEMPLATES.java = `import java.io.*;
 import java.util.*;
 
 public class Main {
@@ -399,7 +425,10 @@ public class Main {
     }
 }
 `;
-const starterFor = pid => S.problems?.find(p => p.id === pid)?.starter || TEMPLATE;
+const LANG = { java: { name: "Java", file: "Main.java", mode: "text/x-java" },
+               python: { name: "Python", file: "main.py", mode: "python" } };
+const langOf = s => s?.lang || "java";
+const starterFor = (pid, lang = S.lang) => S.problems?.find(p => p.id === pid)?.starters?.[lang] || TEMPLATES[lang];
 const VERDICT = {AC: "Accepted", WA: "Wrong answer", TLE: "Time limit exceeded", RE: "Runtime error",
                  CE: "Compilation error", OLE: "Output limit exceeded"};
 
@@ -410,7 +439,8 @@ const local = {
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 const S = { st: null, problems: null, cur: local.get("judge-problem") || "A", tab: "problem", token: local.get("judge-token") || "",
-            offset: 0, busy: false, results: {}, runs: {}, view: null, hostView: local.get("judge-hostview") || "dashboard" };
+            offset: 0, busy: false, results: {}, runs: {}, view: null, hostView: local.get("judge-hostview") || "dashboard",
+            lang: LANG[local.get("judge-lang")] ? local.get("judge-lang") : "java" };
 
 async function api(path, body) {
   const opt = { headers: { "X-Token": S.token } };
@@ -432,14 +462,15 @@ function makeEditor() {
   const host = $("#editor");
   if (window.CodeMirror) {
     const cm = CodeMirror(host, {
-      mode: "text/x-java", lineNumbers: true, indentUnit: 4, tabSize: 4, matchBrackets: true, autoCloseBrackets: true,
+      mode: LANG[S.lang].mode, lineNumbers: true, indentUnit: 4, tabSize: 4, matchBrackets: true, autoCloseBrackets: true,
       extraKeys: {
         Tab: c => c.somethingSelected() ? c.execCommand("indentMore") : c.execCommand("insertSoftTab"),
         "Shift-Tab": c => c.execCommand("indentLess"),
         "Ctrl-Enter": () => doRun(), "Cmd-Enter": () => doRun(),
       },
     });
-    E = { get: () => cm.getValue(), set: v => { cm.setValue(v); cm.clearHistory(); }, onChange: f => cm.on("change", f), refresh: () => cm.refresh() };
+    E = { get: () => cm.getValue(), set: v => { cm.setValue(v); cm.clearHistory(); }, onChange: f => cm.on("change", f),
+          refresh: () => cm.refresh(), setMode: m => cm.setOption("mode", m) };
   } else {
     const ta = document.createElement("textarea");
     ta.spellcheck = false;
@@ -448,12 +479,26 @@ function makeEditor() {
       if (e.key === "Tab") { e.preventDefault(); ta.setRangeText("    ", ta.selectionStart, ta.selectionEnd, "end"); }
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doRun(); }
     });
-    E = { get: () => ta.value, set: v => { ta.value = v; }, onChange: f => ta.addEventListener("input", f), refresh() {} };
+    E = { get: () => ta.value, set: v => { ta.value = v; }, onChange: f => ta.addEventListener("input", f), refresh() {}, setMode() {} };
   }
   let t;
   E.onChange(() => { clearTimeout(t); t = setTimeout(() => local.set(draftKey(S.cur), E.get()), 300); });
 }
-const draftKey = pid => `judge-draft2:${S.st?.title}:${pid}`;
+// Java drafts keep their old key, so code typed before Python existed isn't lost.
+const draftKey = (pid, lang = S.lang) => `judge-draft2:${S.st?.title}:${pid}${lang === "java" ? "" : ":" + lang}`;
+
+function setLang(lang, keepCode) {
+  if (!LANG[lang]) return;
+  if (!keepCode) saveDraft();
+  S.lang = lang;
+  local.set("judge-lang", lang);
+  $("#lang").value = lang;
+  $("#file-name").textContent = LANG[lang].file;
+  E.setMode(LANG[lang].mode);
+  if (!keepCode && S.problems) loadDraft();
+  $("#confirm").hidden = true;
+}
+$("#lang").addEventListener("change", e => setLang(e.target.value));
 function loadDraft() { E.set(local.get(draftKey(S.cur)) ?? starterFor(S.cur)); }
 function saveDraft() { if (E && S.cur) local.set(draftKey(S.cur), E.get()); }
 
@@ -475,6 +520,10 @@ async function refresh() {
   // Players report which problem they have open, for the host dashboard.
   try { st = await api(S.view === "arena" && S.cur ? `/api/state?p=${S.cur}` : "/api/state"); }
   catch (e) { $("#who").textContent = e.message; return; }
+  const before = S.st;
+  if (before && !st.is_host && st.phase === "running" && before.phase === "running" && before.duration !== st.duration) {
+    toast(`<b>The host ${st.duration > before.duration ? "extended" : "shortened"} the contest</b> to ${st.duration / 60} minutes.`, "warn", 10000);
+  }
   S.st = st;
   S.offset = st.now * 1000 - Date.now();
   if (!st.me && S.token) { S.token = ""; local.set("judge-token", ""); }
@@ -573,9 +622,9 @@ function renderLobby() {
   $("#lobby-title").textContent = st.title;
   $("#lobby-sub").textContent = `${st.problem_count} problems · ${st.duration / 60} minutes · ${st.total_points} points in total`;
   $("#rules").innerHTML = [
-    `Solutions are in Java. Your class must be named <code class="mono">Main</code>. The judge uses ${esc(st.java)}.`,
+    `Write in Java or Python, and switch any time. Each problem gives you starter code that already reads the input and prints the answer: you only fill in one function. The judge uses ${esc(st.java)} and ${esc(st.python)}.`,
     `Read from standard input and print to standard output. Output is compared word by word.`,
-    `Each test has a time limit of ${tl}. Java's start-up time is not counted.`,
+    `Each test has a time limit of ${tl} in Java and ${st.python_time_limit.map(t => `${t} s`).join(" or ")} in Python. Start-up time is not counted.`,
     st.penalty
       ? `Every problem is worth the points shown. Ties are broken by time: the minute of each accepted solution, plus ${st.penalty} minutes for each rejected try before it. Compilation errors cost nothing.`
       : `Every problem is worth the points shown. Wrong submissions cost nothing. If points are tied, whoever solved faster ranks higher.`,
@@ -631,7 +680,7 @@ function renderProblem() {
   const p = S.problems.find(x => x.id === S.cur);
   const el = $("#t-problem");
   el.innerHTML = `<article class="statement"><div class="ph"><h1>${p.id}. ${esc(p.title)}</h1>
-    <p>${p.points} points &middot; Time limit ${p.time_limit} s per test &middot; ${p.test_count} tests</p></div>${p.statement}</article>`;
+    <p>${p.points} points &middot; Time limit per test: ${p.time_limits.java} s Java, ${p.time_limits.python} s Python &middot; ${p.test_count} tests</p></div>${p.statement}</article>`;
   el.querySelectorAll(".sample").forEach((box, i) => {
     if (!p.samples[i]) return;
     const b = document.createElement("button");
@@ -669,10 +718,10 @@ function renderStandings() {
 function renderSubs() {
   const subs = S.st.submissions;
   if (!subs.length) { $("#t-subs").innerHTML = `<p class="empty">No submissions yet.</p>`; return; }
-  $("#t-subs").innerHTML = `<div class="tablewrap"><table><thead><tr><th>#</th><th>When</th><th>Problem</th><th>Verdict</th><th>Tests</th><th>Time</th></tr></thead><tbody>
+  $("#t-subs").innerHTML = `<div class="tablewrap"><table><thead><tr><th>#</th><th>When</th><th>Problem</th><th>Language</th><th>Verdict</th><th>Tests</th><th>Time</th></tr></thead><tbody>
     ${subs.map(s => `<tr class="click" data-id="${s.id}"><td class="num">${s.id}</td>
       <td class="num">${s.in_contest ? `${s.minute} min` : `<span class="muted">practice</span>`}</td>
-      <td>${s.problem}</td><td class="v-${s.verdict}"><b>${VERDICT[s.verdict]}</b>${s.test ? ` on test ${s.test}` : ""}</td>
+      <td>${s.problem}</td><td>${LANG[langOf(s)].name}</td><td class="v-${s.verdict}"><b>${VERDICT[s.verdict]}</b>${s.test ? ` on test ${s.test}` : ""}</td>
       <td class="num">${s.passed}/${s.total}</td><td class="num">${s.time != null ? s.time.toFixed(2) + " s" : "-"}</td></tr>`).join("")}
     </tbody></table><p class="note">Click a submission to see its verdict and load its code.</p></div>`;
   for (const tr of document.querySelectorAll("#t-subs tr.click")) tr.onclick = () => {
@@ -714,7 +763,7 @@ async function doRun() {
   out.textContent = "Compiling and running...";
   busy(true, "run");
   try {
-    const r = await api("/api/run", { problem: S.cur, code: E.get(), input: $("#stdin").value });
+    const r = await api("/api/run", { problem: S.cur, lang: S.lang, code: E.get(), input: $("#stdin").value });
     let text = "", cls = "";
     if (r.status === "CE") { text = r.compile_output; cls = "v-CE"; }
     else {
@@ -740,7 +789,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // A short warning before a submission that can't help, or null if it looks fine.
 function submitWarning(code) {
   if (sameCode(code, starterFor(S.cur))) return "This is still the starter code. Write your solution first.";
-  const prev = S.st.submissions.find(s => s.problem === S.cur && sameCode(s.code, code));
+  const prev = S.st.submissions.find(s => s.problem === S.cur && langOf(s) === S.lang && sameCode(s.code, code));
   if (!prev) return null;
   if (prev.verdict === "AC") return "This exact code was already accepted.";
   return `You already submitted this exact code. It got ${VERDICT[prev.verdict].toLowerCase()}${prev.test ? ` on test ${prev.test}` : ""}.`;
@@ -766,7 +815,7 @@ async function doSubmit(force) {
   setConsole("result");
   busy(true, "submit");
   try {
-    const { job, total } = await api("/api/submit", { problem: pid, code });
+    const { job, total } = await api("/api/submit", { problem: pid, lang: S.lang, code });
     let j = { state: "queued", done: 0, total, tests: [] }, misses = 0;
     while (j.state !== "done" && j.state !== "error") {
       if (S.cur === pid) renderProgress(j);
@@ -817,7 +866,7 @@ function renderResult(s, fromHistory) {
   if (fromHistory) extra.push(`<button class="link" id="load-code">Load this code into the editor</button>`);
   box.innerHTML = `${verdictHtml(s)}<p class="note">Submission #${s.id}. ${extra.join(" ")}</p>`;
   const lc = $("#load-code");
-  if (lc) lc.onclick = () => { E.set(s.code); saveDraft(); };
+  if (lc) lc.onclick = () => { if (langOf(s) !== S.lang) setLang(langOf(s)); E.set(s.code); saveDraft(); };
 }
 
 // Verdict line, test boxes and failure details for one submission (shared with the host dashboard).
@@ -1005,9 +1054,10 @@ function renderHost(H) {
 
   $("#h-subs-note").textContent = c.private ? "Code unlocks when the contest ends" : "Click one to see its code";
   $("#h-subs").innerHTML = !H.submissions.length ? `<p class="empty">No submissions yet.</p>`
-    : `<table><thead><tr><th>#</th><th>When</th><th>Participant</th><th>Problem</th><th>Verdict</th><th>Tests</th><th>Time</th></tr></thead><tbody>
+    : `<table><thead><tr><th>#</th><th>When</th><th>Participant</th><th>Problem</th><th>Language</th><th>Verdict</th><th>Tests</th><th>Time</th></tr></thead><tbody>
       ${H.submissions.map(s => `<tr class="click" data-id="${s.id}"><td class="num">${s.id}</td>
         <td class="num">${s.in_contest ? `${s.minute} min` : `<span class="muted">practice</span>`}</td><td>${esc(s.name)}</td><td>${s.problem}</td>
+        <td>${LANG[langOf(s)].name}</td>
         <td class="v-${s.verdict}"><b>${VERDICT[s.verdict]}</b>${s.test ? ` on test ${s.test}` : ""}</td>
         <td class="num">${s.passed}/${s.total}</td><td class="num">${s.time != null ? s.time.toFixed(2) + " s" : "-"}</td></tr>`).join("")}
       </tbody></table>`;
@@ -1030,11 +1080,14 @@ function announceHost(H) {
 
 function renderHostActions(c) {
   const box = $("#h-actions");
-  const key = [c.phase, !!S.st.me, !!S.resetArmed, !!S.competeOpen].join("|");
+  const key = [c.phase, c.duration, !!S.st.me, !!S.resetArmed, !!S.competeOpen].join("|");
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   const parts = [];
   if (c.phase === "lobby") parts.push(`<button class="btn primary" type="button" id="h-start">Start the contest</button>`);
+  if (c.phase !== "ended") parts.push(`<form class="compete" id="h-length" title="${c.phase === "running" ? "Extend or shorten the running contest. Everyone's clock updates within a few seconds." : "How long the contest lasts once it starts."}">
+      <label for="h-minutes" class="muted">Length</label><input id="h-minutes" type="number" min="1" max="1440" step="1" value="${c.duration / 60}" style="width:80px">
+      <span class="muted">minutes</span><button class="btn" type="submit">${c.phase === "running" ? "Change" : "Set"}</button></form>`);
   if (!S.st.me) parts.push(S.competeOpen
     ? `<form class="compete" id="h-compete"><input id="h-name" maxlength="24" placeholder="Your name" aria-label="Your name" required>
          <button class="btn" type="submit">Join as a player</button><button class="link" type="button" id="h-compete-cancel">Cancel</button></form>`
@@ -1043,6 +1096,16 @@ function renderHostActions(c) {
   box.innerHTML = parts.join("");
   const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
   on("#h-start", "click", async () => { await api("/api/start", {}).catch(e => toast(esc(e.message), "bad")); await refresh(); hostRefresh(); });
+  on("#h-length", "submit", async e => {
+    e.preventDefault();
+    const minutes = Number($("#h-minutes").value);
+    try {
+      await api("/api/host/duration", { minutes });
+      toast(`Contest length set to <b>${minutes} minutes</b>.`, "good");
+    } catch (err) { toast(esc(err.message), "bad", 6000); box.dataset.key = ""; }
+    await refresh();
+    hostRefresh();
+  });
   on("#h-compete-open", "click", () => { S.competeOpen = true; renderHostActions(c); $("#h-name")?.focus(); });
   on("#h-compete-cancel", "click", () => { S.competeOpen = false; renderHostActions(c); });
   on("#h-compete", "submit", async e => {
@@ -1079,7 +1142,7 @@ async function openHostSubmission(id) {
   catch (e) { return toast(esc(e.message), "warn", 6000); }
   const title = S.H?.problems.find(p => p.id === s.problem)?.title ?? "";
   const code = String(s.code).replace(/\r/g, "").split("\n").map((l, i) => `<span class="ln">${i + 1}</span>${esc(l)}`).join("\n");
-  openModal(`<h2 id="modal-title">#${s.id} · ${esc(s.name)} · ${s.problem}. ${esc(title)}</h2>
+  openModal(`<h2 id="modal-title">#${s.id} · ${esc(s.name)} · ${s.problem}. ${esc(title)} · ${LANG[langOf(s)].name}</h2>
     <p class="muted">${s.in_contest ? `Submitted at ${s.minute} min` : "Practice submission after the contest"} (${clockTime(s.at)})${s.time != null ? `. Slowest test ${s.time.toFixed(2)} s.` : "."}</p>
     ${verdictHtml(s, "Their output")}
     <div class="detail" style="margin-top:12px"><div><h4>Code</h4><pre class="code">${code}</pre></div></div>
@@ -1271,6 +1334,7 @@ applySplit(+local.get("judge-split"));
 new ResizeObserver(() => E?.refresh()).observe($("#editor"));
 
 makeEditor();
+setLang(S.lang, true);
 refresh();
 setInterval(refresh, 4000);
 setInterval(tick, 1000);

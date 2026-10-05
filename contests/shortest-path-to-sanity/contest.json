@@ -1,0 +1,13 @@
+{
+  "title": "Shortest Path to Sanity",
+  "duration_minutes": 150,
+  "time_limit_seconds": 2,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {"folder": "A-gossip-express", "points": 100},
+    {"folder": "B-prerequisite-paradox", "points": 100},
+    {"folder": "C-roads-to-the-canteen", "points": 100},
+    {"folder": "D-fest-coin-glitch", "points": 100},
+    {"folder": "E-renovation-season", "points": 100}
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "title": "Revision 1: Arrays, Two Pointers, Sliding Window",
+  "duration_minutes": 1440,
+  "time_limit_seconds": 2,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {
+      "folder": "A-contains-duplicate",
+      "points": 100
+    },
+    {
+      "folder": "B-valid-anagram",
+      "points": 100
+    },
+    {
+      "folder": "C-two-sum",
+      "points": 100
+    },
+    {
+      "folder": "D-group-anagrams",
+      "points": 100
+    },
+    {
+      "folder": "E-prefix-sums",
+      "points": 100
+    },
+    {
+      "folder": "F-valid-palindrome",
+      "points": 100
+    },
+    {
+      "folder": "G-two-sum-sorted",
+      "points": 100
+    },
+    {
+      "folder": "H-remove-duplicates",
+      "points": 100
+    },
+    {
+      "folder": "I-three-sum",
+      "points": 100
+    },
+    {
+      "folder": "J-container-with-most-water",
+      "points": 100
+    },
+    {
+      "folder": "K-max-sum-of-k",
+      "points": 100
+    },
+    {
+      "folder": "L-best-time-to-buy-and-sell-stock",
+      "points": 100
+    },
+    {
+      "folder": "M-longest-substring-without-repeats",
+      "points": 100
+    },
+    {
+      "folder": "N-minimum-size-subarray-sum",
+      "points": 100
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "title": "Revision 5: Dynamic Programming and Greedy",
+  "duration_minutes": 1440,
+  "time_limit_seconds": 2,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {
+      "folder": "A-climbing-stairs",
+      "points": 100
+    },
+    {
+      "folder": "B-house-robber",
+      "points": 100
+    },
+    {
+      "folder": "C-coin-change",
+      "points": 100
+    },
+    {
+      "folder": "D-longest-increasing-subsequence",
+      "points": 100
+    },
+    {
+      "folder": "E-unique-paths",
+      "points": 100
+    },
+    {
+      "folder": "F-longest-common-subsequence",
+      "points": 100
+    },
+    {
+      "folder": "G-knapsack",
+      "points": 100
+    },
+    {
+      "folder": "H-edit-distance",
+      "points": 100
+    },
+    {
+      "folder": "I-assign-cookies",
+      "points": 100
+    },
+    {
+      "folder": "J-maximum-subarray",
+      "points": 100
+    },
+    {
+      "folder": "K-jump-game",
+      "points": 100
+    },
+    {
+      "folder": "L-gas-station",
+      "points": 100
+    }
+  ]
+}

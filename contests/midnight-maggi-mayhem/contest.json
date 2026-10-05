@@ -1,0 +1,12 @@
+{
+  "title": "Midnight Maggi Mayhem",
+  "duration_minutes": 120,
+  "time_limit_seconds": 1,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {"folder": "A-maggi-before-midnight", "points": 100},
+    {"folder": "B-night-before-the-exam", "points": 100},
+    {"folder": "C-charger-deadlock", "points": 100},
+    {"folder": "D-half-price-auto", "points": 100, "time_limit_seconds": 2}
+  ]
+}

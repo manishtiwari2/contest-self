@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B: The Prerequisite Paradox</title><style>
+:root{--ink:#1c2230;--muted:#5b6475;--paper:#ffffff;--panel:#f3f5f9;--line:#d7dce6;--accent:#2f5d8a}
+@media (prefers-color-scheme:dark){:root{--ink:#e4e8ef;--muted:#9aa4b5;--paper:#151a22;--panel:#1e2530;--line:#313a48;--accent:#8db4dc}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+a{color:var(--accent)} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{border-bottom:2px solid var(--ink);padding-bottom:1rem;margin-bottom:1.5rem}
+.letter{font:600 1rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .4rem}
+h1{font-size:2.1rem;line-height:1.15;margin:0 0 .6rem;font-weight:700}
+.meta{font:0.9rem/1.4 system-ui,sans-serif;color:var(--muted);margin:0}
+h2{font:700 1.05rem/1.3 system-ui,sans-serif;margin:2rem 0 .5rem;color:var(--ink)}
+p,li{max-width:70ch} ul{padding-left:1.3rem}
+code,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+p code,li code{background:var(--panel);padding:.05em .3em;border-radius:3px}
+.sample{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0 .5rem}
+.sample div{min-width:0}
+.sample h3{font:600 .85rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .35rem}
+pre{margin:0;background:var(--panel);border-left:3px solid var(--accent);padding:.6rem .8rem;overflow-x:auto;line-height:1.45}
+.explain{color:var(--ink);margin:.4rem 0 1.6rem}
+.explain strong{font-family:system-ui,sans-serif;font-size:.9em}
+nav.back{font:0.9rem system-ui,sans-serif;margin-bottom:1.5rem}
+ol.problems{list-style:none;padding:0;margin:0}
+ol.problems li{border-top:1px solid var(--line);padding:1rem 0}
+ol.problems a{font-size:1.3rem;font-weight:700;text-decoration:none}
+ol.problems .meta{margin-top:.2rem}
+@media (max-width:560px){.sample{grid-template-columns:1fr} h1{font-size:1.7rem}}
+@media print{nav.back{display:none} pre{border-left-color:#000}}
+</style></head>
+<body><main><header><p class="letter">Problem B</p><h1>The Prerequisite Paradox</h1><p class="meta">Difficulty: medium. Time limit: 2 seconds.</p></header>
+<p>The college ERP lets professors add course prerequisites. There are <i>n</i> courses, numbered 1 to <i>n</i>.
+Rule &ldquo;<i>a</i> <i>b</i>&rdquo; means: to take course <i>a</i>, you must first pass course <i>b</i>.</p>
+<p>The rules are added one by one. The ERP is fine as long as no course ends up needing <b>itself</b>, directly or
+through a chain of other courses (&ldquo;DSA needs Maths, Maths needs Physics, Physics needs DSA&rdquo;). The moment
+that happens, nobody can graduate and the ERP crashes. Classic.</p>
+<p>After which rule does it crash?</p>
+<h2>Input</h2>
+<p>The first line contains two integers <i>n</i> and <i>m</i> (1 &le; <i>n</i> &le; 10<sup>5</sup>,
+1 &le; <i>m</i> &le; 10<sup>5</sup>).</p>
+<p>The next <i>m</i> lines contain the rules in the order they are added, rule <i>i</i> on line <i>i</i>. Each has
+two integers <i>a</i> and <i>b</i> (1 &le; <i>a</i>, <i>b</i> &le; <i>n</i>). A course can need itself
+(<i>a</i> = <i>b</i>), and the same rule can appear more than once.</p>
+<h2>Output</h2>
+<p>Print the smallest <i>k</i> such that rules 1 to <i>k</i> make some course need itself, or
+<code>-1</code> if the ERP survives all <i>m</i> rules.</p>
+<h2>Examples</h2>
+<div class="sample"><div><h3>Sample input 1</h3><pre>4 5
+1 2
+2 3
+3 4
+4 2
+1 3
+</pre></div><div><h3>Sample output 1</h3><pre>4
+</pre></div></div><p class="explain"><strong>Explanation.</strong> After rule 4, course 2 needs 3, course 3 needs 4, and course 4 needs 2 again: a loop. Nothing before rule 4 made one.</p>
+<div class="sample"><div><h3>Sample input 2</h3><pre>3 3
+1 2
+1 3
+2 3
+</pre></div><div><h3>Sample output 2</h3><pre>-1
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Course 3 is needed by both 1 and 2, but there is no loop: pass 3, then 2, then 1.</p>
+<div class="sample"><div><h3>Sample input 3</h3><pre>3 3
+1 2
+3 3
+2 1
+</pre></div><div><h3>Sample output 3</h3><pre>2
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Rule 2 says course 3 needs course 3 itself.</p>
+</main></body></html>

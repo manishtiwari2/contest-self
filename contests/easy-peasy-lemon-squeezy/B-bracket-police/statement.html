@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B: Bracket Police</title><style>
+:root{--ink:#1c2230;--muted:#5b6475;--paper:#ffffff;--panel:#f3f5f9;--line:#d7dce6;--accent:#2f5d8a}
+@media (prefers-color-scheme:dark){:root{--ink:#e4e8ef;--muted:#9aa4b5;--paper:#151a22;--panel:#1e2530;--line:#313a48;--accent:#8db4dc}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+a{color:var(--accent)} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{border-bottom:2px solid var(--ink);padding-bottom:1rem;margin-bottom:1.5rem}
+.letter{font:600 1rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .4rem}
+h1{font-size:2.1rem;line-height:1.15;margin:0 0 .6rem;font-weight:700}
+.meta{font:0.9rem/1.4 system-ui,sans-serif;color:var(--muted);margin:0}
+h2{font:700 1.05rem/1.3 system-ui,sans-serif;margin:2rem 0 .5rem;color:var(--ink)}
+p,li{max-width:70ch} ul{padding-left:1.3rem}
+code,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+p code,li code{background:var(--panel);padding:.05em .3em;border-radius:3px}
+.sample{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0 .5rem}
+.sample div{min-width:0}
+.sample h3{font:600 .85rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .35rem}
+pre{margin:0;background:var(--panel);border-left:3px solid var(--accent);padding:.6rem .8rem;overflow-x:auto;line-height:1.45}
+.explain{color:var(--ink);margin:.4rem 0 1.6rem}
+.explain strong{font-family:system-ui,sans-serif;font-size:.9em}
+nav.back{font:0.9rem system-ui,sans-serif;margin-bottom:1.5rem}
+ol.problems{list-style:none;padding:0;margin:0}
+ol.problems li{border-top:1px solid var(--line);padding:1rem 0}
+ol.problems a{font-size:1.3rem;font-weight:700;text-decoration:none}
+ol.problems .meta{margin-top:.2rem}
+@media (max-width:560px){.sample{grid-template-columns:1fr} h1{font-size:1.7rem}}
+@media print{nav.back{display:none} pre{border-left-color:#000}}
+</style></head>
+<body><main><header><p class="letter">Problem B</p><h1>Bracket Police</h1><p class="meta">Topic: Stack. Difficulty: easy. Time limit: 1 second.</p></header>
+<p>Your lab partner writes code like they're in a hurry to catch the last bus, and the compiler keeps shouting
+about brackets. You decide to check their brackets yourself.</p>
+<p>A string of brackets <code>( ) [ ] { }</code> is <b>balanced</b> if every opening bracket is closed by the
+<b>same kind</b> of bracket, and brackets close in the right order: the one opened last is closed first. So
+<code>{[()]}</code> and <code>()[]</code> are balanced, while <code>(]</code>, <code>([)]</code> and
+<code>)(</code> are not.</p>
+<p>Check <i>t</i> strings.</p>
+<h2>Input</h2>
+<p>The first line contains an integer <i>t</i> (1 &le; <i>t</i> &le; 10<sup>5</sup>).</p>
+<p>Each of the next <i>t</i> lines contains a non-empty string of the characters <code>( ) [ ] { }</code>. The
+total length of all strings is at most 2&middot;10<sup>5</sup>.</p>
+<h2>Output</h2>
+<p>For each string, print <code>YES</code> if it is balanced and <code>NO</code> otherwise, each on its
+own line.</p>
+<h2>Examples</h2>
+<div class="sample"><div><h3>Sample input 1</h3><pre>5
+()
+([]{})
+(]
+([)]
+((
+</pre></div><div><h3>Sample output 1</h3><pre>YES
+YES
+NO
+NO
+NO
+</pre></div></div><p class="explain"><strong>Explanation.</strong> The first two are balanced. In <code>(]</code> the kinds don't match. In <code>([)]</code> the <code>(</code> is closed before the <code>[</code> opened inside it. In <code>((</code> nothing is ever closed.</p>
+</main></body></html>

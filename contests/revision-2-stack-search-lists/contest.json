@@ -1,0 +1,60 @@
+{
+  "title": "Revision 2: Stack, Binary Search, Linked List",
+  "duration_minutes": 1440,
+  "time_limit_seconds": 2,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {
+      "folder": "A-valid-parentheses",
+      "points": 100
+    },
+    {
+      "folder": "B-min-stack",
+      "points": 100
+    },
+    {
+      "folder": "C-evaluate-reverse-polish-notation",
+      "points": 100
+    },
+    {
+      "folder": "D-daily-temperatures",
+      "points": 100
+    },
+    {
+      "folder": "E-binary-search",
+      "points": 100
+    },
+    {
+      "folder": "F-search-insert-position",
+      "points": 100
+    },
+    {
+      "folder": "G-koko-eating-bananas",
+      "points": 100
+    },
+    {
+      "folder": "H-search-in-rotated-sorted-array",
+      "points": 100
+    },
+    {
+      "folder": "I-reverse-linked-list",
+      "points": 100
+    },
+    {
+      "folder": "J-merge-two-sorted-lists",
+      "points": 100
+    },
+    {
+      "folder": "K-linked-list-cycle",
+      "points": 100
+    },
+    {
+      "folder": "L-middle-of-the-linked-list",
+      "points": 100
+    },
+    {
+      "folder": "M-remove-nth-node-from-end",
+      "points": 100
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C: All Roads Lead to the Canteen</title><style>
+:root{--ink:#1c2230;--muted:#5b6475;--paper:#ffffff;--panel:#f3f5f9;--line:#d7dce6;--accent:#2f5d8a}
+@media (prefers-color-scheme:dark){:root{--ink:#e4e8ef;--muted:#9aa4b5;--paper:#151a22;--panel:#1e2530;--line:#313a48;--accent:#8db4dc}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+a{color:var(--accent)} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{border-bottom:2px solid var(--ink);padding-bottom:1rem;margin-bottom:1.5rem}
+.letter{font:600 1rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .4rem}
+h1{font-size:2.1rem;line-height:1.15;margin:0 0 .6rem;font-weight:700}
+.meta{font:0.9rem/1.4 system-ui,sans-serif;color:var(--muted);margin:0}
+h2{font:700 1.05rem/1.3 system-ui,sans-serif;margin:2rem 0 .5rem;color:var(--ink)}
+p,li{max-width:70ch} ul{padding-left:1.3rem}
+code,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+p code,li code{background:var(--panel);padding:.05em .3em;border-radius:3px}
+.sample{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0 .5rem}
+.sample div{min-width:0}
+.sample h3{font:600 .85rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .35rem}
+pre{margin:0;background:var(--panel);border-left:3px solid var(--accent);padding:.6rem .8rem;overflow-x:auto;line-height:1.45}
+.explain{color:var(--ink);margin:.4rem 0 1.6rem}
+.explain strong{font-family:system-ui,sans-serif;font-size:.9em}
+nav.back{font:0.9rem system-ui,sans-serif;margin-bottom:1.5rem}
+ol.problems{list-style:none;padding:0;margin:0}
+ol.problems li{border-top:1px solid var(--line);padding:1rem 0}
+ol.problems a{font-size:1.3rem;font-weight:700;text-decoration:none}
+ol.problems .meta{margin-top:.2rem}
+@media (max-width:560px){.sample{grid-template-columns:1fr} h1{font-size:1.7rem}}
+@media print{nav.back{display:none} pre{border-left-color:#000}}
+</style></head>
+<body><main><header><p class="letter">Problem C</p><h1>All Roads Lead to the Canteen</h1><p class="meta">Difficulty: medium. Time limit: 2 seconds.</p></header>
+<p>Samosas come out of the fryer at 5 PM sharp, and they are gone by 5:05. You and your friends each want to get
+there as fast as possible, and nobody wants to run the same way as anyone else.</p>
+<p>The campus has <i>n</i> spots, numbered 1 to <i>n</i>: spot 1 is your hostel and spot <i>n</i> is the canteen.
+There are <i>m</i> roads. Road <i>i</i> joins spots <i>a<sub>i</sub></i> and <i>b<sub>i</sub></i> in <b>both</b>
+directions and takes <i>t<sub>i</sub></i> minutes.</p>
+<p>Find the fastest time from the hostel to the canteen, and <b>how many different fastest routes</b> there are.
+Two routes are different if they use a different sequence of roads. Two roads between the same two spots are
+different roads.</p>
+<h2>Input</h2>
+<p>The first line contains two integers <i>n</i> and <i>m</i> (2 &le; <i>n</i> &le; 10<sup>5</sup>,
+1 &le; <i>m</i> &le; 2&middot;10<sup>5</sup>).</p>
+<p>Each of the next <i>m</i> lines contains three integers <i>a</i>, <i>b</i> and <i>t</i> (1 &le; <i>a</i>,
+<i>b</i> &le; <i>n</i>, 1 &le; <i>t</i> &le; 10<sup>9</sup>). A road can join a spot to itself.</p>
+<h2>Output</h2>
+<p>Print two integers: the fastest time, and the number of fastest routes modulo
+10<sup>9</sup>&nbsp;+&nbsp;7. If the canteen can't be reached, print <code>-1 0</code>.</p>
+<h2>Examples</h2>
+<div class="sample"><div><h3>Sample input 1</h3><pre>4 5
+1 2 3
+2 4 4
+1 3 5
+3 4 2
+1 4 8
+</pre></div><div><h3>Sample output 1</h3><pre>7 2
+</pre></div></div><p class="explain"><strong>Explanation.</strong> 1 &rarr; 2 &rarr; 4 and 1 &rarr; 3 &rarr; 4 both take 7 minutes. The direct road takes 8.</p>
+<div class="sample"><div><h3>Sample input 2</h3><pre>3 3
+1 2 5
+2 1 5
+2 3 1
+</pre></div><div><h3>Sample output 2</h3><pre>6 2
+</pre></div></div><p class="explain"><strong>Explanation.</strong> There are two different roads between spots 1 and 2, so there are two fastest routes, each 6 minutes long.</p>
+<div class="sample"><div><h3>Sample input 3</h3><pre>3 1
+1 2 4
+</pre></div><div><h3>Sample output 3</h3><pre>-1 0
+</pre></div></div><p class="explain"><strong>Explanation.</strong> No road reaches spot 3.</p>
+</main></body></html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D: Half-Price Auto</title><style>
+:root{--ink:#1c2230;--muted:#5b6475;--paper:#ffffff;--panel:#f3f5f9;--line:#d7dce6;--accent:#2f5d8a}
+@media (prefers-color-scheme:dark){:root{--ink:#e4e8ef;--muted:#9aa4b5;--paper:#151a22;--panel:#1e2530;--line:#313a48;--accent:#8db4dc}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+a{color:var(--accent)} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{border-bottom:2px solid var(--ink);padding-bottom:1rem;margin-bottom:1.5rem}
+.letter{font:600 1rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .4rem}
+h1{font-size:2.1rem;line-height:1.15;margin:0 0 .6rem;font-weight:700}
+.meta{font:0.9rem/1.4 system-ui,sans-serif;color:var(--muted);margin:0}
+h2{font:700 1.05rem/1.3 system-ui,sans-serif;margin:2rem 0 .5rem;color:var(--ink)}
+p,li{max-width:70ch} ul{padding-left:1.3rem}
+code,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+p code,li code{background:var(--panel);padding:.05em .3em;border-radius:3px}
+.sample{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0 .5rem}
+.sample div{min-width:0}
+.sample h3{font:600 .85rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .35rem}
+pre{margin:0;background:var(--panel);border-left:3px solid var(--accent);padding:.6rem .8rem;overflow-x:auto;line-height:1.45}
+.explain{color:var(--ink);margin:.4rem 0 1.6rem}
+.explain strong{font-family:system-ui,sans-serif;font-size:.9em}
+nav.back{font:0.9rem system-ui,sans-serif;margin-bottom:1.5rem}
+ol.problems{list-style:none;padding:0;margin:0}
+ol.problems li{border-top:1px solid var(--line);padding:1rem 0}
+ol.problems a{font-size:1.3rem;font-weight:700;text-decoration:none}
+ol.problems .meta{margin-top:.2rem}
+@media (max-width:560px){.sample{grid-template-columns:1fr} h1{font-size:1.7rem}}
+@media print{nav.back{display:none} pre{border-left-color:#000}}
+</style></head>
+<body><main><header><p class="letter">Problem D</p><h1>Half-Price Auto</h1><p class="meta">Difficulty: hard. Time limit: 2 seconds.</p></header>
+<p>Your train back from home gets in at 2 AM, and your wallet is nearly empty. The city has <i>n</i> auto stops,
+numbered 1 to <i>n</i>: stop 1 is the railway station and stop <i>n</i> is your hostel gate.</p>
+<p>There are <i>m</i> auto routes. Route <i>i</i> goes <b>one way</b> from stop <i>a<sub>i</sub></i> to stop
+<i>b<sub>i</sub></i> and costs <i>c<sub>i</sub></i> rupees. (Going back the other way is a different route, if it
+exists at all.)</p>
+<p>A friendly auto driver gave you <b>one coupon</b>: use it on any single ride to pay half its fare, rounded down.
+What is the cheapest way to get from the station to the hostel?</p>
+<h2>Input</h2>
+<p>The first line contains two integers <i>n</i> and <i>m</i> (2 &le; <i>n</i> &le; 10<sup>5</sup>,
+1 &le; <i>m</i> &le; 2&middot;10<sup>5</sup>).</p>
+<p>Each of the next <i>m</i> lines contains three integers <i>a</i>, <i>b</i> and <i>c</i> (1 &le; <i>a</i>,
+<i>b</i> &le; <i>n</i>, 1 &le; <i>c</i> &le; 10<sup>9</sup>): a one-way ride from <i>a</i> to <i>b</i> costing
+<i>c</i> rupees. There can be several routes between the same stops, and routes from a stop back to itself.</p>
+<h2>Output</h2>
+<p>Print the minimum total cost, or <code>-1</code> if the hostel can't be reached. (Time to call a friend.)</p>
+<h2>Examples</h2>
+<div class="sample"><div><h3>Sample input 1</h3><pre>4 5
+1 2 10
+2 4 40
+1 3 30
+3 4 10
+2 3 5
+</pre></div><div><h3>Sample output 1</h3><pre>20
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Ride 1 &rarr; 2 &rarr; 3 &rarr; 4 for 10 + 5 + 10 = 25 rupees, and use the coupon on one of the 10-rupee rides: 20 rupees. Using it on the 40-rupee ride of 1 &rarr; 2 &rarr; 4 still costs 10 + 20 = 30.</p>
+<div class="sample"><div><h3>Sample input 2</h3><pre>3 2
+1 2 7
+3 2 4
+</pre></div><div><h3>Sample output 2</h3><pre>-1
+</pre></div></div><p class="explain"><strong>Explanation.</strong> The only route touching stop 3 goes from 3 to 2, not the other way, so the hostel can't be reached.</p>
+<div class="sample"><div><h3>Sample input 3</h3><pre>2 1
+1 2 9
+</pre></div><div><h3>Sample output 3</h3><pre>4
+</pre></div></div><p class="explain"><strong>Explanation.</strong> The single ride costs 9 rupees, and half of 9 rounded down is 4.</p>
+</main></body></html>

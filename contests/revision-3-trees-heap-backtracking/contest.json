@@ -1,0 +1,56 @@
+{
+  "title": "Revision 3: Trees, Heap, Backtracking",
+  "duration_minutes": 1440,
+  "time_limit_seconds": 2,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {
+      "folder": "A-maximum-depth-of-binary-tree",
+      "points": 100
+    },
+    {
+      "folder": "B-invert-binary-tree",
+      "points": 100
+    },
+    {
+      "folder": "C-level-order-traversal",
+      "points": 100
+    },
+    {
+      "folder": "D-validate-binary-search-tree",
+      "points": 100
+    },
+    {
+      "folder": "E-kth-largest-element",
+      "points": 100
+    },
+    {
+      "folder": "F-last-stone-weight",
+      "points": 100
+    },
+    {
+      "folder": "G-top-k-frequent-elements",
+      "points": 100
+    },
+    {
+      "folder": "H-k-closest-points",
+      "points": 100
+    },
+    {
+      "folder": "I-subsets",
+      "points": 100
+    },
+    {
+      "folder": "J-permutations",
+      "points": 100
+    },
+    {
+      "folder": "K-combination-sum",
+      "points": 100
+    },
+    {
+      "folder": "L-generate-parentheses",
+      "points": 100
+    }
+  ]
+}

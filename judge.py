@@ -1,4 +1,4 @@
-"""Contest judge for Java solutions. Needs Python 3.10+ and a JDK (javac + java).
+"""Contest judge for Java and Python solutions. Needs Python 3.10+ and a JDK (javac + java).
 
     python judge.py                            run the only contest in contests/
     python judge.py graph-traversals           run a specific contest
@@ -39,7 +39,8 @@ MAX_BODY = 1024 * 1024
 
 JAVA = JAVAC = None
 JAVA_VERSION = ""
-STARTUP = 0.0                  # measured JVM start-up time, not charged to solutions
+PYTHON_VERSION = f"Python {sys.version.split()[0]}"
+STARTUP = {"java": 0.0, "python": 0.0}  # measured start-up time per language, not charged to solutions
 JUDGE_LOCK = threading.Lock()  # one program at a time, so timings stay fair
 CONTEST = STORE = None
 SHARE = False       # others may join, with the join code
@@ -69,7 +70,7 @@ def strip_tags(s):
 
 
 # ------------------------------------------------------------------ contest files
-def load_problem(cdir, index, entry, default_tl):
+def load_problem(cdir, index, entry, default_tl, python_factor=3.0):
     folder = cdir / entry["folder"]
     statement = folder / "statement.html"
     if not statement.is_file():
@@ -99,13 +100,16 @@ def load_problem(cdir, index, entry, default_tl):
          "output": t["input"].with_suffix(".ans").read_text(encoding="utf-8")}
         for t in tests if t["kind"] == "sample"
     ]
-    starter = folder / "Main.java"
+    starters = {lang: folder / info["file"] for lang, info in LANGS.items()}
+    java_tl = float(entry.get("time_limit_seconds", default_tl))
     return {
         "id": chr(ord("A") + index),
         "title": strip_tags(h1.group(1)) if h1 else entry["folder"],
-        "starter": starter.read_text(encoding="utf-8") if starter.is_file() else None,
+        "starters": {lang: p.read_text(encoding="utf-8") if p.is_file() else None for lang, p in starters.items()},
         "points": int(entry.get("points", 100)),
-        "time_limit": float(entry.get("time_limit_seconds", default_tl)),
+        "time_limit": java_tl,
+        "time_limits": {"java": java_tl,
+                        "python": float(entry.get("python_time_limit_seconds", java_tl * python_factor))},
         "statement": body.strip(),
         "samples": samples,
         "tests": tests,
@@ -126,7 +130,8 @@ class Contest:
         tl = float(cfg.get("time_limit_seconds", 1))
         if not cfg.get("problems"):
             die(f"{self.dir / 'contest.json'} lists no problems.")
-        self.problems = [load_problem(self.dir, i, p, tl) for i, p in enumerate(cfg["problems"])]
+        factor = float(cfg.get("python_time_multiplier", 3))
+        self.problems = [load_problem(self.dir, i, p, tl, factor) for i, p in enumerate(cfg["problems"])]
         self.by_id = {p["id"]: p for p in self.problems}
 
     def phase(self, start, now):
@@ -155,27 +160,72 @@ class Store:
         os.replace(tmp, self.path)
 
 
-# ------------------------------------------------------------------ running Java
-def compile_java(code, d):
-    (d / "Main.java").write_text(code, encoding="utf-8")
+# ------------------------------------------------------------------ running programs
+LANGS = {"java": {"name": "Java", "file": "Main.java"}, "python": {"name": "Python", "file": "main.py"}}
+
+# Runs main.py in a thread with a big stack and a high recursion limit, so deep recursion
+# behaves like Java's -Xss256m instead of crashing at Python's default depth of 1000.
+PY_RUNNER = """import runpy, sys, threading, traceback
+sys.setrecursionlimit(10 ** 6)
+for mb in (255, 128, 64, 32):  # the largest stack this system allows (Windows caps it just under 256 MB)
     try:
-        p = subprocess.run([JAVAC, "-encoding", "UTF-8", "Main.java"], cwd=d, capture_output=True, timeout=60)
+        threading.stack_size(mb * 1024 * 1024)
+        break
+    except ValueError:
+        pass
+status = [1]
+def main():
+    try:
+        runpy.run_path("main.py", run_name="__main__")
+        status[0] = 0
+    except SystemExit as e:
+        if e.code is None or isinstance(e.code, int):
+            status[0] = e.code or 0
+        else:
+            print(e.code, file=sys.stderr)
+    except BaseException:
+        traceback.print_exc()
+thread = threading.Thread(target=main)
+thread.start()
+thread.join()
+sys.stdout.flush()
+sys.exit(status[0])
+"""
+
+
+def prepare(lang, code, d):
+    """Write the program into d and compile or syntax-check it. Returns an error message, or None."""
+    (d / LANGS[lang]["file"]).write_text(code, encoding="utf-8")
+    if lang == "python":
+        (d / "_run.py").write_text(PY_RUNNER, encoding="utf-8")
+        cmd, what = [sys.executable, "-m", "py_compile", "main.py"], "Python"
+    else:
+        cmd, what = [JAVAC, "-encoding", "UTF-8", "Main.java"], "javac"
+    try:
+        p = subprocess.run(cmd, cwd=d, capture_output=True, timeout=60)
     except subprocess.TimeoutExpired:
         return "Compilation took longer than 60 seconds."
     if p.returncode != 0:
-        return decode(p.stdout + p.stderr)[-6000:] or "javac failed without a message."
-    if not (d / "Main.class").is_file():
+        return decode(p.stdout + p.stderr)[-6000:] or f"{what} failed without a message."
+    if lang == "java" and not (d / "Main.class").is_file():
         return "No class named Main was found. Your code must declare: public class Main"
     return None
 
 
-def run_java(d, stdin_path, time_limit):
+def command(lang, d):
+    if lang == "python":
+        return [sys.executable, "-X", "utf8", "_run.py"]
+    return [JAVA, *JAVA_FLAGS, "-cp", str(d), "Main"]
+
+
+def run_program(lang, d, stdin_path, time_limit):
     out_path, err_path = d / "out.txt", d / "err.txt"
+    startup = STARTUP[lang]
     with open(stdin_path, "rb") as fin, open(out_path, "wb") as fout, open(err_path, "wb") as ferr:
         start = time.perf_counter()
-        p = subprocess.Popen([JAVA, *JAVA_FLAGS, "-cp", str(d), "Main"], cwd=d, stdin=fin, stdout=fout, stderr=ferr)
+        p = subprocess.Popen(command(lang, d), cwd=d, stdin=fin, stdout=fout, stderr=ferr)
         try:
-            code = p.wait(timeout=time_limit + STARTUP + SLACK)
+            code = p.wait(timeout=time_limit + startup + SLACK)
         except subprocess.TimeoutExpired:
             p.kill()
             p.wait()
@@ -183,25 +233,29 @@ def run_java(d, stdin_path, time_limit):
         wall = time.perf_counter() - start
     err = decode(err_path.read_bytes()[-4000:])
     if out_path.stat().st_size > MAX_OUTPUT:
-        return {"status": "OLE", "time": wall - STARTUP, "out": b"", "err": err, "code": code}
-    return {"status": "OK" if code == 0 else "RE", "time": max(0.0, wall - STARTUP),
+        return {"status": "OLE", "time": wall - startup, "out": b"", "err": err, "code": code}
+    return {"status": "OK" if code == 0 else "RE", "time": max(0.0, wall - startup),
             "out": out_path.read_bytes(), "err": err, "code": code}
 
 
 def calibrate():
-    """Time an empty Java program, so JVM start-up is not counted against solutions."""
-    with tempfile.TemporaryDirectory(prefix="judge-", ignore_cleanup_errors=True) as tmp:
-        d = Path(tmp)
-        if compile_java("public class Main { public static void main(String[] a) {} }", d):
-            die("javac could not compile an empty program. Check your JDK.")
-        (d / "empty.in").write_bytes(b"")
-        times = []
-        for _ in range(3):
-            t = time.perf_counter()
-            subprocess.run([JAVA, *JAVA_FLAGS, "-cp", str(d), "Main"], stdin=open(d / "empty.in", "rb"),
-                           capture_output=True)
-            times.append(time.perf_counter() - t)
-        return statistics.median(times)
+    """Time an empty program in each language, so start-up time is not counted against solutions."""
+    empty = {"java": "public class Main { public static void main(String[] a) {} }", "python": "pass\n"}
+    result = {}
+    for lang in LANGS:
+        with tempfile.TemporaryDirectory(prefix="judge-", ignore_cleanup_errors=True) as tmp:
+            d = Path(tmp)
+            if prepare(lang, empty[lang], d):
+                die(f"Could not run an empty {LANGS[lang]['name']} program. Check your installation.")
+            (d / "empty.in").write_bytes(b"")
+            times = []
+            for _ in range(3):
+                t = time.perf_counter()
+                with open(d / "empty.in", "rb") as fin:
+                    subprocess.run(command(lang, d), cwd=d, stdin=fin, capture_output=True)
+                times.append(time.perf_counter() - t)
+            result[lang] = statistics.median(times)
+    return result
 
 
 def first_difference(output, expected):
@@ -218,24 +272,25 @@ def first_difference(output, expected):
     return None
 
 
-def judge(prob, code, job=None):
+def judge(prob, code, job=None, lang="java"):
     """Judge code on every test, stopping at the first failure. job, if given, receives live progress."""
     total = len(prob["tests"])
+    limit = prob["time_limits"][lang]
     with JUDGE_LOCK, tempfile.TemporaryDirectory(prefix="judge-", ignore_cleanup_errors=True) as tmp:
         d = Path(tmp)
         if job:
             job["state"] = "compiling"
-        err = compile_java(code, d)
+        err = prepare(lang, code, d)
         if err:
             return {"verdict": "CE", "compile_output": err, "passed": 0, "total": total, "tests": []}
         if job:
             job["state"] = "judging"
         results = []
         for i, t in enumerate(prob["tests"]):
-            r = run_java(d, t["input"], prob["time_limit"])
+            r = run_program(lang, d, t["input"], limit)
             if r["status"] == "TLE":
                 # A laptop can stall for a moment (virus scan, updates), so confirm a timeout once.
-                r = run_java(d, t["input"], prob["time_limit"])
+                r = run_program(lang, d, t["input"], limit)
             v = r["status"]
             if v == "OK":
                 v = "AC" if r["out"].split() == t["answer"] else "WA"
@@ -262,14 +317,14 @@ def judge(prob, code, job=None):
                 "time": round(max(x["t"] for x in results), 2)}
 
 
-def run_custom(prob, code, stdin_text):
+def run_custom(prob, code, stdin_text, lang="java"):
     with JUDGE_LOCK, tempfile.TemporaryDirectory(prefix="judge-", ignore_cleanup_errors=True) as tmp:
         d = Path(tmp)
-        err = compile_java(code, d)
+        err = prepare(lang, code, d)
         if err:
             return {"status": "CE", "compile_output": err}
         (d / "custom.in").write_text(stdin_text, encoding="utf-8")
-        r = run_java(d, d / "custom.in", prob["time_limit"])
+        r = run_program(lang, d, d / "custom.in", prob["time_limits"][lang])
     res = {"status": r["status"], "time": round(r["time"], 2), "output": decode(r["out"][:65536]),
            "stderr": r["err"], "exit_code": r["code"]}
     for s in prob["samples"]:
@@ -286,9 +341,9 @@ def run_custom(prob, code, stdin_text):
 JOBS = {}  # submission id -> live progress, polled by the browser while judging
 
 
-def process_submission(job, token, prob, code, at):
+def process_submission(job, token, prob, code, at, lang="java"):
     try:
-        result = judge(prob, code, job)
+        result = judge(prob, code, job, lang)
     except Exception as e:  # keep the browser from waiting forever
         job.update(state="error", error=f"The judge hit an error: {e}")
         return
@@ -301,7 +356,7 @@ def process_submission(job, token, prob, code, at):
             job.update(state="error", error="The host removed you from the contest.")
             return
         next_id = max((s["id"] for s in STORE.data["submissions"]), default=0) + 1
-        sub = {"id": next_id, "user": token, "problem": prob["id"],
+        sub = {"id": next_id, "user": token, "problem": prob["id"], "lang": lang,
                "code": code, "at": at, "minute": int((at - start) // 60),
                "in_contest": at < start + CONTEST.duration, **result}
         STORE.data["submissions"].append(sub)
@@ -337,7 +392,7 @@ def scoreboard(now):
 
 
 def public_submission(s, phase):
-    out = {k: s.get(k) for k in ("id", "problem", "verdict", "test", "passed", "total", "time", "minute",
+    out = {k: s.get(k) for k in ("id", "problem", "lang", "verdict", "test", "passed", "total", "time", "minute",
                                  "in_contest", "at", "code", "tests", "compile_output")}
     f = s.get("failure")
     if f:
@@ -415,7 +470,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.error(401, "Join the contest first.")
             if CONTEST.phase(STORE.data["start"], time.time()) == "lobby":
                 return self.error(403, "The contest has not started yet.")
-            keys = ("id", "title", "points", "time_limit", "statement", "samples", "starter")
+            keys = ("id", "title", "points", "time_limit", "time_limits", "statement", "samples", "starters")
             self.reply([{**{k: p[k] for k in keys}, "test_count": len(p["tests"])} for p in CONTEST.problems])
         else:
             self.error(404, "Not found.")
@@ -432,7 +487,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.error(400, "The request was not valid JSON.")
         path = self.path.split("?", 1)[0]
         routes = {"/api/join": self.join, "/api/start": self.start, "/api/reset": self.reset,
-                  "/api/run": self.run, "/api/submit": self.submit, "/api/host/remove": self.remove}
+                  "/api/run": self.run, "/api/submit": self.submit, "/api/host/remove": self.remove,
+                  "/api/host/duration": self.set_duration}
         if path not in routes:
             return self.error(404, "Not found.")
         routes[path](body)
@@ -453,7 +509,8 @@ class Handler(BaseHTTPRequestHandler):
             "phase": phase, "penalty": CONTEST.penalty, "problem_count": len(CONTEST.problems),
             "total_points": sum(p["points"] for p in CONTEST.problems),
             "time_limit": sorted({p["time_limit"] for p in CONTEST.problems}),
-            "java": JAVA_VERSION, "is_host": self.is_host(), "needs_code": SHARE and not self.is_host(),
+            "python_time_limit": sorted({p["time_limits"]["python"] for p in CONTEST.problems}),
+            "java": JAVA_VERSION, "python": PYTHON_VERSION, "is_host": self.is_host(), "needs_code": SHARE and not self.is_host(),
             "me": {"name": user["name"], "host": bool(user.get("host"))} if user else None,
             "participants": sorted((u["name"] for u in d["users"].values()), key=str.lower),
         }
@@ -528,7 +585,7 @@ class Handler(BaseHTTPRequestHandler):
                          "in_contest": s["in_contest"], "first_ac": first_ac})
         feed.sort(key=lambda e: e["at"], reverse=True)
 
-        keys = ("id", "problem", "verdict", "test", "passed", "total", "time", "minute", "in_contest", "at")
+        keys = ("id", "problem", "lang", "verdict", "test", "passed", "total", "time", "minute", "in_contest", "at")
         return {
             "contest": {"title": CONTEST.title, "phase": phase, "start": d["start"], "now": now,
                         "duration": CONTEST.duration, "penalty": CONTEST.penalty, "share_url": SHARE_URL,
@@ -598,6 +655,29 @@ class Handler(BaseHTTPRequestHandler):
                 STORE.save()
         self.reply({"ok": True})
 
+    def set_duration(self, body):
+        if not self.is_host():
+            return self.error(403, "Only the host can change the contest length.")
+        try:
+            minutes = int(body.get("minutes"))
+        except (TypeError, ValueError):
+            return self.error(400, "Enter the length in minutes.")
+        if not 1 <= minutes <= 1440:
+            return self.error(400, "The length must be between 1 and 1440 minutes.")
+        now = time.time()
+        with STORE.lock:
+            start = STORE.data["start"]
+            phase = CONTEST.phase(start, now)
+            if phase == "ended":
+                return self.error(409, "The contest has ended. Reset it to change the length.")
+            if phase == "running" and start + minutes * 60 <= now:
+                ran = int((now - start) // 60)
+                return self.error(400, f"The contest has already run for {ran} minutes. Choose more than that.")
+            CONTEST.duration = minutes * 60
+            STORE.data["duration"] = CONTEST.duration
+            STORE.save()
+        self.reply({"ok": True, "duration": CONTEST.duration})
+
     def reset(self, body):
         if not self.is_host():
             return self.error(403, "Only the host can reset the contest.")
@@ -620,6 +700,9 @@ class Handler(BaseHTTPRequestHandler):
         if not prob or not isinstance(code, str) or not code.strip():
             self.error(400, "Pick a problem and write some code first.")
             return None, None
+        if body.get("lang", "java") not in LANGS:
+            self.error(400, "Pick Java or Python.")
+            return None, None
         return token, prob
 
     def run(self, body):
@@ -627,7 +710,7 @@ class Handler(BaseHTTPRequestHandler):
         if prob:
             seen = PRESENCE.setdefault(token, {"runs": 0})
             seen.update(runs=seen["runs"] + 1, last_run=time.time(), last_run_problem=prob["id"], seen=time.time())
-            self.reply(run_custom(prob, body["code"], str(body.get("input", ""))))
+            self.reply(run_custom(prob, body["code"], str(body.get("input", "")), body.get("lang", "java")))
 
     def submit(self, body):
         token, prob = self.problem_for(body)
@@ -642,7 +725,8 @@ class Handler(BaseHTTPRequestHandler):
                 del JOBS[old]
             job_id = secrets.token_hex(8)
             JOBS[job_id] = job
-        threading.Thread(target=process_submission, args=(job, token, prob, body["code"], at), daemon=True).start()
+        lang = body.get("lang", "java")
+        threading.Thread(target=process_submission, args=(job, token, prob, body["code"], at, lang), daemon=True).start()
         self.reply({"job": job_id, "total": job["total"]})
 
 
@@ -735,6 +819,10 @@ def new_contest(name):
         "        int a = Integer.parseInt(st.nextToken());\n"
         "        int b = Integer.parseInt(st.nextToken());\n\n"
         "        System.out.println(sum(a, b));\n    }\n}\n", encoding="utf-8")
+    (prob / "main.py").write_text(
+        "import sys\n\n\n# Return a + b.\ndef sum_of_two(a, b):\n\n    # Write your code here\n\n    return 0\n\n\n"
+        "def main():\n    input = sys.stdin.readline\n\n    a, b = map(int, input().split())\n\n"
+        "    print(sum_of_two(a, b))\n\n\nmain()\n", encoding="utf-8")
     files = {"sample/01-sample1": ("2 3\n", "5\n"), "secret/01-negative": ("-4 1\n", "-3\n"),
              "secret/02-overflow": ("1000000000 1000000000\n", "2000000000\n")}
     for stem, (inp, ans) in files.items():
@@ -754,7 +842,24 @@ def pick_contest(name):
         return found[0]
     if not found:
         die("No contests found. Create one with: python judge.py --new my-contest")
-    die("Several contests found. Pick one:\n" + "\n".join(f"    python judge.py {c}" for c in found))
+    how = "Several contests found. Pick one:\n" + "\n".join(f"    python judge.py {c}" for c in found)
+    if not sys.stdin.isatty():
+        die(how)
+    print("\nWhich contest?")
+    for i, c in enumerate(found, 1):
+        try:
+            title = json.loads((CONTESTS / c / "contest.json").read_text(encoding="utf-8")).get("title", c)
+        except (OSError, ValueError):
+            title = c
+        print(f"  {i}. {title}")
+    while True:
+        try:
+            choice = input(f"Type a number (1-{len(found)}) and press Enter: ").strip()
+        except EOFError:  # no keyboard (e.g. started from a script)
+            die(how)
+        if choice.isdigit() and 1 <= int(choice) <= len(found):
+            return found[int(choice) - 1]
+        print("That isn't one of the numbers above.")
 
 
 def main():
@@ -781,12 +886,16 @@ def main():
     cid = pick_contest(args.contest)
     CONTEST = Contest(cid)
     STORE = Store(DATA / f"{cid}.json")
+    if STORE.data.get("duration"):  # the host changed the length on the dashboard
+        CONTEST.duration = STORE.data["duration"]
     print(f"\n{CONTEST.title}  ({CONTEST.duration // 60} minutes)")
     for p in CONTEST.problems:
-        print(f"  {p['id']}. {p['title']:<28} {p['points']} pts  {len(p['tests'])} tests  {p['time_limit']:g}s")
-    print("Measuring Java start-up time...", end=" ", flush=True)
+        tl = p["time_limits"]
+        print(f"  {p['id']}. {p['title']:<28} {p['points']} pts  {len(p['tests'])} tests  "
+              f"{tl['java']:g}s Java, {tl['python']:g}s Python")
+    print("Measuring start-up time...", end=" ", flush=True)
     STARTUP = calibrate()
-    print(f"{STARTUP:.2f}s (not counted against solutions)")
+    print(f"Java {STARTUP['java']:.2f}s, Python {STARTUP['python']:.2f}s (not counted against solutions)")
 
     SHARE = args.share or args.online
     SHARE_MODE = "online" if args.online else "wifi" if args.share else ""

@@ -1,0 +1,72 @@
+{
+  "title": "Revision 6: Intervals, Math, Bit Manipulation",
+  "duration_minutes": 1440,
+  "time_limit_seconds": 2,
+  "wrong_attempt_penalty_minutes": 0,
+  "problems": [
+    {
+      "folder": "A-meeting-rooms",
+      "points": 100
+    },
+    {
+      "folder": "B-merge-intervals",
+      "points": 100
+    },
+    {
+      "folder": "C-non-overlapping-intervals",
+      "points": 100
+    },
+    {
+      "folder": "D-meeting-rooms-ii",
+      "points": 100
+    },
+    {
+      "folder": "E-gcd-and-lcm",
+      "points": 100
+    },
+    {
+      "folder": "F-is-n-prime",
+      "points": 100
+    },
+    {
+      "folder": "G-count-primes",
+      "points": 100
+    },
+    {
+      "folder": "H-fast-power",
+      "points": 100
+    },
+    {
+      "folder": "I-rotate-image",
+      "points": 100
+    },
+    {
+      "folder": "J-spiral-matrix",
+      "points": 100
+    },
+    {
+      "folder": "K-single-number",
+      "points": 100
+    },
+    {
+      "folder": "L-number-of-1-bits",
+      "points": 100
+    },
+    {
+      "folder": "M-counting-bits",
+      "points": 100
+    },
+    {
+      "folder": "N-missing-number",
+      "points": 100
+    },
+    {
+      "folder": "O-power-of-two",
+      "points": 100
+    },
+    {
+      "folder": "P-subsets-with-a-bitmask",
+      "points": 100
+    }
+  ]
+}

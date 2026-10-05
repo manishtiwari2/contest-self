@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C: The Charger Deadlock</title><style>
+:root{--ink:#1c2230;--muted:#5b6475;--paper:#ffffff;--panel:#f3f5f9;--line:#d7dce6;--accent:#2f5d8a}
+@media (prefers-color-scheme:dark){:root{--ink:#e4e8ef;--muted:#9aa4b5;--paper:#151a22;--panel:#1e2530;--line:#313a48;--accent:#8db4dc}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.65 Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+a{color:var(--accent)} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{border-bottom:2px solid var(--ink);padding-bottom:1rem;margin-bottom:1.5rem}
+.letter{font:600 1rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .4rem}
+h1{font-size:2.1rem;line-height:1.15;margin:0 0 .6rem;font-weight:700}
+.meta{font:0.9rem/1.4 system-ui,sans-serif;color:var(--muted);margin:0}
+h2{font:700 1.05rem/1.3 system-ui,sans-serif;margin:2rem 0 .5rem;color:var(--ink)}
+p,li{max-width:70ch} ul{padding-left:1.3rem}
+code,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+p code,li code{background:var(--panel);padding:.05em .3em;border-radius:3px}
+.sample{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0 .5rem}
+.sample div{min-width:0}
+.sample h3{font:600 .85rem/1 system-ui,sans-serif;color:var(--muted);margin:0 0 .35rem}
+pre{margin:0;background:var(--panel);border-left:3px solid var(--accent);padding:.6rem .8rem;overflow-x:auto;line-height:1.45}
+.explain{color:var(--ink);margin:.4rem 0 1.6rem}
+.explain strong{font-family:system-ui,sans-serif;font-size:.9em}
+nav.back{font:0.9rem system-ui,sans-serif;margin-bottom:1.5rem}
+ol.problems{list-style:none;padding:0;margin:0}
+ol.problems li{border-top:1px solid var(--line);padding:1rem 0}
+ol.problems a{font-size:1.3rem;font-weight:700;text-decoration:none}
+ol.problems .meta{margin-top:.2rem}
+@media (max-width:560px){.sample{grid-template-columns:1fr} h1{font-size:1.7rem}}
+@media print{nav.back{display:none} pre{border-left-color:#000}}
+</style></head>
+<body><main><header><p class="letter">Problem C</p><h1>The Charger Deadlock</h1><p class="meta">Difficulty: medium. Time limit: 1 second.</p></header>
+<p>The hostel has exactly zero spare phone chargers. There are <i>n</i> students, numbered 1 to <i>n</i>, and
+<i>m</i> notes of the form &ldquo;student <i>a</i> is waiting for student <i>b</i>&rdquo;: <i>a</i> can't finish
+charging until <i>b</i> has finished and handed over the charger.</p>
+<p>A student finishes as soon as <b>every</b> student they wait for has finished. Someone who waits for nobody
+finishes right away. A student can even wait for themselves (don't ask), and the same note can appear more than
+once.</p>
+<p>Some students will be stuck forever. Find them.</p>
+<h2>Input</h2>
+<p>The first line contains two integers <i>n</i> and <i>m</i> (1 &le; <i>n</i> &le; 2&middot;10<sup>5</sup>,
+0 &le; <i>m</i> &le; 2&middot;10<sup>5</sup>).</p>
+<p>Each of the next <i>m</i> lines contains two integers <i>a</i> and <i>b</i> (1 &le; <i>a</i>, <i>b</i> &le;
+<i>n</i>): student <i>a</i> is waiting for student <i>b</i>.</p>
+<h2>Output</h2>
+<p>On the first line, print <i>k</i>, the number of students who never finish.</p>
+<p>If <i>k</i> &gt; 0, print on the second line their numbers in increasing order, separated by spaces.</p>
+<h2>Examples</h2>
+<div class="sample"><div><h3>Sample input 1</h3><pre>6 6
+1 2
+2 3
+3 2
+4 5
+5 6
+4 1
+</pre></div><div><h3>Sample output 1</h3><pre>4
+1 2 3 4
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Students 2 and 3 wait for each other, so neither ever finishes. Student 1 waits for 2, and student 4 waits for 1, so they're stuck too. Student 6 waits for nobody and finishes first, then student 5 can finish.</p>
+<div class="sample"><div><h3>Sample input 2</h3><pre>3 2
+1 2
+2 3
+</pre></div><div><h3>Sample output 2</h3><pre>0
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Student 3 finishes first, then 2, then 1. Nobody is stuck, so only <code>0</code> is printed.</p>
+<div class="sample"><div><h3>Sample input 3</h3><pre>2 1
+1 1
+</pre></div><div><h3>Sample output 3</h3><pre>1
+1
+</pre></div></div><p class="explain"><strong>Explanation.</strong> Student 1 is waiting for themselves, which never ends well.</p>
+</main></body></html>
